@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Star, Shield, Clock } from "lucide-react";
+import { Search, Star, Shield, Clock } from "lucide-react";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
 import heroImage from "@/assets/hero-cleaning.jpg";
 
 const Hero = () => {
@@ -49,16 +50,11 @@ const Hero = () => {
             {/* Search Box */}
             <form onSubmit={handleSearch} className="bg-card rounded-2xl p-2 shadow-card-hover max-w-xl mx-auto lg:mx-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
               <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1 relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Enter your postal code or city"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full h-12 pl-12 pr-4 bg-muted rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
+                <LocationAutocomplete
+                  value={location}
+                  onChange={setLocation}
+                  onSelect={(city) => navigate(`/search?location=${encodeURIComponent(city)}`)}
+                />
                 <Button type="submit" variant="hero" size="lg" className="px-8">
                   <Search className="h-5 w-5 mr-2" />
                   Search
