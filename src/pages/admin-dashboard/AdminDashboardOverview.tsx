@@ -8,7 +8,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -16,9 +15,12 @@ import {
   BarChart,
   Bar,
   Legend,
+  Tooltip,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, subMonths } from "date-fns";
+import { format, eachDayOfInterval, startOfDay, startOfMonth, subMonths, subDays } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { DateRangeFilter } from "@/components/admin-dashboard/DateRangeFilter";
 
 interface DashboardStats {
   totalUsers: number;
@@ -52,6 +54,7 @@ interface RevenueSummary {
   thisMonth: number;
   lastMonth: number;
   total: number;
+  filtered: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -70,6 +73,10 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const AdminDashboardOverview = () => {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalCleaners: 0,
@@ -80,12 +87,13 @@ const AdminDashboardOverview = () => {
   const [revenueTrend, setRevenueTrend] = useState<RevenueByDate[]>([]);
   const [bookingStatuses, setBookingStatuses] = useState<BookingStatusData[]>([]);
   const [roleDistribution, setRoleDistribution] = useState<RoleDistribution[]>([]);
-  const [revenueSummary, setRevenueSummary] = useState<RevenueSummary>({ thisMonth: 0, lastMonth: 0, total: 0 });
+  const [revenueSummary, setRevenueSummary] = useState<RevenueSummary>({ thisMonth: 0, lastMonth: 0, total: 0, filtered: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAllData = async () => {
       try {
+        setLoading(true);
         await Promise.all([
           fetchStats(),
           fetchBookingsTrend(),
@@ -101,7 +109,7 @@ const AdminDashboardOverview = () => {
     };
 
     fetchAllData();
-  }, []);
+  }, [dateRange]);
 
   const fetchStats = async () => {
     const [userRes, cleanerRes, bookingRes, pendingRes] = await Promise.all([
@@ -120,27 +128,26 @@ const AdminDashboardOverview = () => {
   };
 
   const fetchBookingsTrend = async () => {
-    const thirtyDaysAgo = subDays(new Date(), 30);
-    
+    if (!dateRange?.from || !dateRange?.to) return;
+
     const { data: bookings } = await supabase
       .from("bookings")
       .select("created_at")
-      .gte("created_at", thirtyDaysAgo.toISOString());
+      .gte("created_at", dateRange.from.toISOString())
+      .lte("created_at", dateRange.to.toISOString());
 
-    // Create date range for last 30 days
-    const dateRange = eachDayOfInterval({
-      start: thirtyDaysAgo,
-      end: new Date(),
+    const dateRangeInterval = eachDayOfInterval({
+      start: dateRange.from,
+      end: dateRange.to,
     });
 
-    // Count bookings per day
     const bookingCounts = new Map<string, number>();
     bookings?.forEach((booking) => {
       const date = format(startOfDay(new Date(booking.created_at)), "yyyy-MM-dd");
       bookingCounts.set(date, (bookingCounts.get(date) || 0) + 1);
     });
 
-    const trendData = dateRange.map((date) => ({
+    const trendData = dateRangeInterval.map((date) => ({
       date: format(date, "MMM dd"),
       bookings: bookingCounts.get(format(date, "yyyy-MM-dd")) || 0,
     }));
@@ -149,21 +156,21 @@ const AdminDashboardOverview = () => {
   };
 
   const fetchRevenueTrend = async () => {
-    const thirtyDaysAgo = subDays(new Date(), 30);
+    if (!dateRange?.from || !dateRange?.to) return;
+
     const thisMonthStart = startOfMonth(new Date());
     const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
     const lastMonthEnd = subDays(thisMonthStart, 1);
-    
-    // Fetch completed bookings for revenue
+
     const { data: bookings } = await supabase
       .from("bookings")
       .select("scheduled_date, service_price, status")
       .eq("status", "completed");
 
-    // Calculate revenue summary
     let thisMonthRevenue = 0;
     let lastMonthRevenue = 0;
     let totalRevenue = 0;
+    let filteredRevenue = 0;
 
     bookings?.forEach((booking) => {
       const bookingDate = new Date(booking.scheduled_date);
@@ -175,31 +182,34 @@ const AdminDashboardOverview = () => {
       } else if (bookingDate >= lastMonthStart && bookingDate <= lastMonthEnd) {
         lastMonthRevenue += price;
       }
+
+      if (dateRange?.from && dateRange?.to && bookingDate >= dateRange.from && bookingDate <= dateRange.to) {
+        filteredRevenue += price;
+      }
     });
 
     setRevenueSummary({
       thisMonth: thisMonthRevenue,
       lastMonth: lastMonthRevenue,
       total: totalRevenue,
+      filtered: filteredRevenue,
     });
 
-    // Create date range for last 30 days
-    const dateRange = eachDayOfInterval({
-      start: thirtyDaysAgo,
-      end: new Date(),
+    const dateRangeInterval = eachDayOfInterval({
+      start: dateRange.from,
+      end: dateRange.to,
     });
 
-    // Calculate revenue per day
     const revenueCounts = new Map<string, number>();
     bookings?.forEach((booking) => {
-      const date = format(new Date(booking.scheduled_date), "yyyy-MM-dd");
-      const dateObj = new Date(booking.scheduled_date);
-      if (dateObj >= thirtyDaysAgo) {
+      const bookingDate = new Date(booking.scheduled_date);
+      if (dateRange?.from && dateRange?.to && bookingDate >= dateRange.from && bookingDate <= dateRange.to) {
+        const date = format(bookingDate, "yyyy-MM-dd");
         revenueCounts.set(date, (revenueCounts.get(date) || 0) + Number(booking.service_price));
       }
     });
 
-    const trendData = dateRange.map((date) => ({
+    const trendData = dateRangeInterval.map((date) => ({
       date: format(date, "MMM dd"),
       revenue: revenueCounts.get(format(date, "yyyy-MM-dd")) || 0,
     }));
@@ -208,9 +218,13 @@ const AdminDashboardOverview = () => {
   };
 
   const fetchBookingStatuses = async () => {
+    if (!dateRange?.from || !dateRange?.to) return;
+
     const { data: bookings } = await supabase
       .from("bookings")
-      .select("status");
+      .select("status, created_at")
+      .gte("created_at", dateRange.from.toISOString())
+      .lte("created_at", dateRange.to.toISOString());
 
     const statusCounts = new Map<string, number>();
     bookings?.forEach((booking) => {
@@ -288,9 +302,12 @@ const AdminDashboardOverview = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-heading text-2xl font-bold text-foreground">Dashboard Overview</h2>
-        <p className="text-muted-foreground">Welcome to the admin panel. Monitor platform activity.</p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="font-heading text-2xl font-bold text-foreground">Dashboard Overview</h2>
+          <p className="text-muted-foreground">Welcome to the admin panel. Monitor platform activity.</p>
+        </div>
+        <DateRangeFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
       </div>
 
       {/* Stats Grid */}
@@ -320,9 +337,11 @@ const AdminDashboardOverview = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Bookings Trend (Last 30 Days)
+            Bookings Trend
           </CardTitle>
-          <CardDescription>Daily booking activity over the past month</CardDescription>
+          <CardDescription>
+            Daily booking activity {dateRange?.from && dateRange?.to && `from ${format(dateRange.from, "MMM dd")} to ${format(dateRange.to, "MMM dd, yyyy")}`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -368,9 +387,11 @@ const AdminDashboardOverview = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
-            Revenue Analytics (Last 30 Days)
+            Revenue Analytics
           </CardTitle>
-          <CardDescription>Daily earnings from completed bookings</CardDescription>
+          <CardDescription>
+            Daily earnings from completed bookings {dateRange?.from && dateRange?.to && `(${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")})`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -424,7 +445,7 @@ const AdminDashboardOverview = () => {
               <CalendarCheck className="h-5 w-5 text-primary" />
               Booking Status
             </CardTitle>
-            <CardDescription>Distribution of booking statuses</CardDescription>
+            <CardDescription>Distribution of booking statuses in selected range</CardDescription>
           </CardHeader>
           <CardContent>
             {bookingStatuses.length > 0 ? (
@@ -464,7 +485,7 @@ const AdminDashboardOverview = () => {
               </div>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                No booking data available
+                No booking data available for selected range
               </div>
             )}
           </CardContent>
@@ -563,6 +584,10 @@ const AdminDashboardOverview = () => {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Selected Range</span>
+                <span className="text-sm font-medium text-primary">${revenueSummary.filtered.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">This Month</span>
                 <span className="text-sm font-medium">${revenueSummary.thisMonth.toFixed(2)}</span>
               </div>
@@ -572,7 +597,7 @@ const AdminDashboardOverview = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Total Revenue</span>
-                <span className="text-sm font-medium text-primary">${revenueSummary.total.toFixed(2)}</span>
+                <span className="text-sm font-medium">${revenueSummary.total.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
