@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
   CardContent,
@@ -242,9 +243,48 @@ const AdminPaymentVerification = () => {
     }
   };
 
-  const handleVerify = () => {
+  const sendPaymentNotification = async (
+    payment: Payment,
+    type: "verified" | "rejected",
+    reason?: string
+  ) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-payment-notification", {
+        body: {
+          type,
+          customerEmail: payment.customerEmail,
+          customerName: payment.customerName,
+          paymentId: payment.id,
+          bookingId: payment.bookingId,
+          amount: payment.totalAmount,
+          cleanerName: payment.cleanerName,
+          bookingDate: format(payment.bookingDate, "EEEE, MMMM d, yyyy"),
+          rejectionReason: reason,
+        },
+      });
+
+      if (error) {
+        console.error("Error sending notification:", error);
+        toast({
+          variant: "destructive",
+          title: "Email Failed",
+          description: "Payment was processed but notification email failed to send.",
+        });
+        return false;
+      }
+
+      console.log("Notification sent:", data);
+      return true;
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      return false;
+    }
+  };
+
+  const handleVerify = async () => {
     if (!selectedPayment) return;
 
+    // Update local state
     setPayments((prev) =>
       prev.map((p) =>
         p.id === selectedPayment.id
@@ -259,9 +299,14 @@ const AdminPaymentVerification = () => {
       )
     );
 
+    // Send email notification
+    const emailSent = await sendPaymentNotification(selectedPayment, "verified");
+
     toast({
       title: "Payment Verified",
-      description: `Payment ${selectedPayment.id} has been verified and booking confirmed.`,
+      description: emailSent 
+        ? `Payment ${selectedPayment.id} verified. Customer has been notified.`
+        : `Payment ${selectedPayment.id} verified. Email notification failed.`,
     });
 
     setVerifyDialogOpen(false);
@@ -269,9 +314,10 @@ const AdminPaymentVerification = () => {
     setVerificationNote("");
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedPayment || !rejectionReason) return;
 
+    // Update local state
     setPayments((prev) =>
       prev.map((p) =>
         p.id === selectedPayment.id
@@ -286,10 +332,15 @@ const AdminPaymentVerification = () => {
       )
     );
 
+    // Send email notification
+    const emailSent = await sendPaymentNotification(selectedPayment, "rejected", rejectionReason);
+
     toast({
       variant: "destructive",
       title: "Payment Rejected",
-      description: `Payment ${selectedPayment.id} has been rejected. Customer will be notified.`,
+      description: emailSent
+        ? `Payment ${selectedPayment.id} rejected. Customer has been notified.`
+        : `Payment ${selectedPayment.id} rejected. Email notification failed.`,
     });
 
     setRejectDialogOpen(false);
