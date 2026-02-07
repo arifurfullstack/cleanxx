@@ -71,6 +71,7 @@ interface Payment {
   customerName: string;
   customerEmail: string;
   cleanerName: string;
+  cleanerEmail: string;
   amount: number;
   serviceFee: number;
   totalAmount: number;
@@ -78,6 +79,9 @@ interface Payment {
   status: PaymentStatus;
   submittedAt: Date;
   bookingDate: Date;
+  bookingTime: string;
+  serviceType: string;
+  customerAddress: string;
   referenceNumber: string;
   notes: string;
   verifiedAt?: Date;
@@ -95,6 +99,7 @@ const mockPendingPayments: Payment[] = [
     customerName: "Sarah Johnson",
     customerEmail: "sarah.j@email.com",
     cleanerName: "SparklePro Cleaning",
+    cleanerEmail: "sparklepro@email.com",
     amount: 180.00,
     serviceFee: 18.00,
     totalAmount: 198.00,
@@ -102,6 +107,9 @@ const mockPendingPayments: Payment[] = [
     status: "pending",
     submittedAt: new Date("2024-02-05T10:30:00"),
     bookingDate: new Date("2024-02-10"),
+    bookingTime: "9:00 AM",
+    serviceType: "Deep Cleaning",
+    customerAddress: "123 Main St, Toronto, ON",
     referenceNumber: "TRF-78234",
     notes: "Payment sent from TD Bank",
   },
@@ -111,6 +119,7 @@ const mockPendingPayments: Payment[] = [
     customerName: "Michael Chen",
     customerEmail: "m.chen@email.com",
     cleanerName: "CleanSweep Services",
+    cleanerEmail: "cleansweep@email.com",
     amount: 240.00,
     serviceFee: 24.00,
     totalAmount: 264.00,
@@ -118,6 +127,9 @@ const mockPendingPayments: Payment[] = [
     status: "pending",
     submittedAt: new Date("2024-02-06T14:15:00"),
     bookingDate: new Date("2024-02-12"),
+    bookingTime: "2:00 PM",
+    serviceType: "Standard Home Cleaning",
+    customerAddress: "456 Oak Ave, Vancouver, BC",
     referenceNumber: "ETR-91847",
     notes: "",
   },
@@ -127,6 +139,7 @@ const mockPendingPayments: Payment[] = [
     customerName: "Emily Rodriguez",
     customerEmail: "emily.r@email.com",
     cleanerName: "Fresh & Clean Co",
+    cleanerEmail: "freshclean@email.com",
     amount: 150.00,
     serviceFee: 15.00,
     totalAmount: 165.00,
@@ -134,6 +147,9 @@ const mockPendingPayments: Payment[] = [
     status: "under_review",
     submittedAt: new Date("2024-02-04T09:00:00"),
     bookingDate: new Date("2024-02-08"),
+    bookingTime: "11:00 AM",
+    serviceType: "Move In/Out Cleaning",
+    customerAddress: "789 Pine Rd, Calgary, AB",
     referenceNumber: "RBC-45621",
     notes: "Amount mismatch - customer sent $160",
   },
@@ -143,6 +159,7 @@ const mockPendingPayments: Payment[] = [
     customerName: "David Kim",
     customerEmail: "d.kim@email.com",
     cleanerName: "Pristine Home Care",
+    cleanerEmail: "pristine@email.com",
     amount: 320.00,
     serviceFee: 32.00,
     totalAmount: 352.00,
@@ -150,6 +167,9 @@ const mockPendingPayments: Payment[] = [
     status: "verified",
     submittedAt: new Date("2024-02-03T11:45:00"),
     bookingDate: new Date("2024-02-07"),
+    bookingTime: "10:00 AM",
+    serviceType: "Post-Construction",
+    customerAddress: "321 Elm St, Montreal, QC",
     referenceNumber: "BMO-33291",
     notes: "Verified by admin",
     verifiedAt: new Date("2024-02-03T15:30:00"),
@@ -161,6 +181,7 @@ const mockPendingPayments: Payment[] = [
     customerName: "Lisa Thompson",
     customerEmail: "lisa.t@email.com",
     cleanerName: "EcoClean Solutions",
+    cleanerEmail: "ecoclean@email.com",
     amount: 200.00,
     serviceFee: 20.00,
     totalAmount: 220.00,
@@ -168,6 +189,9 @@ const mockPendingPayments: Payment[] = [
     status: "rejected",
     submittedAt: new Date("2024-02-02T16:20:00"),
     bookingDate: new Date("2024-02-06"),
+    bookingTime: "3:00 PM",
+    serviceType: "Office Cleaning",
+    customerAddress: "555 Business Blvd, Ottawa, ON",
     referenceNumber: "",
     notes: "No payment received after 48 hours",
     rejectedAt: new Date("2024-02-04T16:20:00"),
@@ -259,24 +283,54 @@ const AdminPaymentVerification = () => {
           amount: payment.totalAmount,
           cleanerName: payment.cleanerName,
           bookingDate: format(payment.bookingDate, "EEEE, MMMM d, yyyy"),
+          bookingTime: payment.bookingTime,
+          serviceType: payment.serviceType,
+          customerAddress: payment.customerAddress,
           rejectionReason: reason,
         },
       });
 
       if (error) {
-        console.error("Error sending notification:", error);
-        toast({
-          variant: "destructive",
-          title: "Email Failed",
-          description: "Payment was processed but notification email failed to send.",
-        });
+        console.error("Error sending customer notification:", error);
         return false;
       }
 
-      console.log("Notification sent:", data);
+      console.log("Customer notification sent:", data);
       return true;
     } catch (error) {
       console.error("Error sending notification:", error);
+      return false;
+    }
+  };
+
+  const sendCleanerNotification = async (payment: Payment) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-payment-notification", {
+        body: {
+          type: "cleaner_confirmed",
+          customerEmail: payment.customerEmail,
+          customerName: payment.customerName,
+          paymentId: payment.id,
+          bookingId: payment.bookingId,
+          amount: payment.totalAmount,
+          cleanerName: payment.cleanerName,
+          cleanerEmail: payment.cleanerEmail,
+          bookingDate: format(payment.bookingDate, "EEEE, MMMM d, yyyy"),
+          bookingTime: payment.bookingTime,
+          serviceType: payment.serviceType,
+          customerAddress: payment.customerAddress,
+        },
+      });
+
+      if (error) {
+        console.error("Error sending cleaner notification:", error);
+        return false;
+      }
+
+      console.log("Cleaner notification sent:", data);
+      return true;
+    } catch (error) {
+      console.error("Error sending cleaner notification:", error);
       return false;
     }
   };
@@ -299,15 +353,30 @@ const AdminPaymentVerification = () => {
       )
     );
 
-    // Send email notification
-    const emailSent = await sendPaymentNotification(selectedPayment, "verified");
+    // Send email notifications to both customer and cleaner
+    const [customerEmailSent, cleanerEmailSent] = await Promise.all([
+      sendPaymentNotification(selectedPayment, "verified"),
+      sendCleanerNotification(selectedPayment),
+    ]);
 
-    toast({
-      title: "Payment Verified",
-      description: emailSent 
-        ? `Payment ${selectedPayment.id} verified. Customer has been notified.`
-        : `Payment ${selectedPayment.id} verified. Email notification failed.`,
-    });
+    if (customerEmailSent && cleanerEmailSent) {
+      toast({
+        title: "Payment Verified",
+        description: `Payment ${selectedPayment.id} verified. Both customer and cleaner have been notified.`,
+      });
+    } else if (customerEmailSent || cleanerEmailSent) {
+      toast({
+        title: "Payment Verified",
+        description: `Payment ${selectedPayment.id} verified. Some notifications failed to send.`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Payment Verified",
+        description: `Payment ${selectedPayment.id} verified. Email notifications failed.`,
+        variant: "destructive",
+      });
+    }
 
     setVerifyDialogOpen(false);
     setSelectedPayment(null);
