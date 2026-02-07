@@ -26,12 +26,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Search, UserCircle, Mail, Calendar, Loader2, Pencil } from "lucide-react";
+import { Search, UserCircle, Mail, Calendar, Loader2, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { EditUserDialog } from "@/components/admin-dashboard/EditUserDialog";
+import { DeleteUserDialog } from "@/components/admin-dashboard/DeleteUserDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -58,6 +59,8 @@ const AdminUsers = () => {
   const [updatingRoles, setUpdatingRoles] = useState<Set<string>>(new Set());
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<UserWithRole | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,6 +177,16 @@ const AdminUsers = () => {
           : user
       )
     );
+  };
+
+  const handleDeleteUser = (user: UserWithRole) => {
+    setDeletingUser(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleUserDeleted = (userId: string) => {
+    setUsers((prev) => prev.filter((user) => user.id !== userId));
+    setTotalCount((prev) => prev - 1);
   };
 
   const handlePageSizeChange = (newSize: string) => {
@@ -352,14 +365,25 @@ const AdminUsers = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -419,6 +443,13 @@ const AdminUsers = () => {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onUserUpdated={handleUserUpdated}
+      />
+
+      <DeleteUserDialog
+        user={deletingUser}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onUserDeleted={handleUserDeleted}
       />
     </div>
   );
