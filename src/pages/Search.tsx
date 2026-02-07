@@ -8,6 +8,13 @@ import CleanerCard, { Cleaner } from "@/components/CleanerCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Mock data - will be replaced with API calls
 const mockCleaners: Cleaner[] = [
@@ -246,7 +253,7 @@ const Search = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-8">
+        <div className="flex gap-6">
           {/* Filters Sidebar */}
           <SearchFilters
             filters={filters}
@@ -256,20 +263,40 @@ const Search = () => {
 
           {/* Results */}
           <div className="flex-1 min-w-0">
-            {/* View Toggle (Desktop) */}
-            <div className="hidden lg:flex items-center gap-2 mb-6">
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(value) => value && setViewMode(value as "grid" | "list")}
+            {/* Desktop Sort & Results Header */}
+            <div className="hidden lg:flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{filteredCleaners.length}</span> cleaners found
+                </span>
+                <ToggleGroup
+                  type="single"
+                  value={viewMode}
+                  onValueChange={(value) => value && setViewMode(value as "grid" | "list")}
+                >
+                  <ToggleGroupItem value="grid" aria-label="Grid view">
+                    <LayoutGrid className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="list" aria-label="List view">
+                    <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <Select 
+                value={filters.sortBy} 
+                onValueChange={(value) => setFilters({ ...filters, sortBy: value })}
               >
-                <ToggleGroupItem value="grid" aria-label="Grid view">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="List view">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recommended">Recommended</SelectItem>
+                  <SelectItem value="rating">Highest Rated</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="reviews">Most Reviews</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Results Grid/List */}

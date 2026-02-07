@@ -278,25 +278,6 @@ const SearchFilters = ({ filters, onFiltersChange, resultCount }: SearchFiltersP
           {resultCount} results
         </span>
       </div>
-
-      {/* Desktop Sort & Results Count */}
-      <div className="hidden lg:flex items-center justify-between mb-6">
-        <span className="text-muted-foreground">
-          <span className="font-semibold text-foreground">{resultCount}</span> cleaners found
-        </span>
-        <Select value={filters.sortBy} onValueChange={(value) => updateFilter("sortBy", value)}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            {sortOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
     </>
   );
 };
