@@ -2,6 +2,23 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Briefcase, CalendarCheck, DollarSign, TrendingUp, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 
 interface DashboardStats {
   totalUsers: number;
@@ -10,6 +27,37 @@ interface DashboardStats {
   pendingBookings: number;
 }
 
+interface BookingsByDate {
+  date: string;
+  bookings: number;
+}
+
+interface BookingStatusData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface RoleDistribution {
+  role: string;
+  count: number;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: "hsl(var(--chart-1))",
+  confirmed: "hsl(var(--chart-2))",
+  in_progress: "hsl(var(--chart-3))",
+  completed: "hsl(var(--chart-4))",
+  cancelled: "hsl(var(--chart-5))",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  customer: "hsl(var(--chart-1))",
+  cleaner: "hsl(var(--chart-2))",
+  company: "hsl(var(--chart-3))",
+  admin: "hsl(var(--chart-4))",
+};
+
 const AdminDashboardOverview = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -17,46 +65,111 @@ const AdminDashboardOverview = () => {
     totalBookings: 0,
     pendingBookings: 0,
   });
+  const [bookingsTrend, setBookingsTrend] = useState<BookingsByDate[]>([]);
+  const [bookingStatuses, setBookingStatuses] = useState<BookingStatusData[]>([]);
+  const [roleDistribution, setRoleDistribution] = useState<RoleDistribution[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAllData = async () => {
       try {
-        // Fetch user count
-        const { count: userCount } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch cleaner count
-        const { count: cleanerCount } = await supabase
-          .from("cleaner_profiles")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch booking counts
-        const { count: bookingCount } = await supabase
-          .from("bookings")
-          .select("*", { count: "exact", head: true });
-
-        const { count: pendingCount } = await supabase
-          .from("bookings")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending");
-
-        setStats({
-          totalUsers: userCount || 0,
-          totalCleaners: cleanerCount || 0,
-          totalBookings: bookingCount || 0,
-          pendingBookings: pendingCount || 0,
-        });
+        await Promise.all([
+          fetchStats(),
+          fetchBookingsTrend(),
+          fetchBookingStatuses(),
+          fetchRoleDistribution(),
+        ]);
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        console.error("Error fetching dashboard data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchAllData();
   }, []);
+
+  const fetchStats = async () => {
+    const [userRes, cleanerRes, bookingRes, pendingRes] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("cleaner_profiles").select("*", { count: "exact", head: true }),
+      supabase.from("bookings").select("*", { count: "exact", head: true }),
+      supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    ]);
+
+    setStats({
+      totalUsers: userRes.count || 0,
+      totalCleaners: cleanerRes.count || 0,
+      totalBookings: bookingRes.count || 0,
+      pendingBookings: pendingRes.count || 0,
+    });
+  };
+
+  const fetchBookingsTrend = async () => {
+    const thirtyDaysAgo = subDays(new Date(), 30);
+    
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .select("created_at")
+      .gte("created_at", thirtyDaysAgo.toISOString());
+
+    // Create date range for last 30 days
+    const dateRange = eachDayOfInterval({
+      start: thirtyDaysAgo,
+      end: new Date(),
+    });
+
+    // Count bookings per day
+    const bookingCounts = new Map<string, number>();
+    bookings?.forEach((booking) => {
+      const date = format(startOfDay(new Date(booking.created_at)), "yyyy-MM-dd");
+      bookingCounts.set(date, (bookingCounts.get(date) || 0) + 1);
+    });
+
+    const trendData = dateRange.map((date) => ({
+      date: format(date, "MMM dd"),
+      bookings: bookingCounts.get(format(date, "yyyy-MM-dd")) || 0,
+    }));
+
+    setBookingsTrend(trendData);
+  };
+
+  const fetchBookingStatuses = async () => {
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .select("status");
+
+    const statusCounts = new Map<string, number>();
+    bookings?.forEach((booking) => {
+      statusCounts.set(booking.status, (statusCounts.get(booking.status) || 0) + 1);
+    });
+
+    const statusData: BookingStatusData[] = Array.from(statusCounts.entries()).map(([status, count]) => ({
+      name: status.replace("_", " ").charAt(0).toUpperCase() + status.replace("_", " ").slice(1),
+      value: count,
+      color: STATUS_COLORS[status] || "hsl(var(--muted))",
+    }));
+
+    setBookingStatuses(statusData);
+  };
+
+  const fetchRoleDistribution = async () => {
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role");
+
+    const roleCounts = new Map<string, number>();
+    roles?.forEach((r) => {
+      roleCounts.set(r.role, (roleCounts.get(r.role) || 0) + 1);
+    });
+
+    const roleData: RoleDistribution[] = Array.from(roleCounts.entries()).map(([role, count]) => ({
+      role: role.charAt(0).toUpperCase() + role.slice(1),
+      count,
+    }));
+
+    setRoleDistribution(roleData);
+  };
 
   const statCards = [
     {
@@ -89,6 +202,13 @@ const AdminDashboardOverview = () => {
     },
   ];
 
+  const chartConfig = {
+    bookings: {
+      label: "Bookings",
+      color: "hsl(var(--primary))",
+    },
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -118,7 +238,164 @@ const AdminDashboardOverview = () => {
         ))}
       </div>
 
-      {/* Quick Actions */}
+      {/* Bookings Trend Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Bookings Trend (Last 30 Days)
+          </CardTitle>
+          <CardDescription>Daily booking activity over the past month</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={bookingsTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-muted-foreground"
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-muted-foreground"
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area
+                  type="monotone"
+                  dataKey="bookings"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorBookings)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Two Column Charts */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Booking Status Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarCheck className="h-5 w-5 text-primary" />
+              Booking Status
+            </CardTitle>
+            <CardDescription>Distribution of booking statuses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bookingStatuses.length > 0 ? (
+              <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={bookingStatuses}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {bookingStatuses.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => [value, "Bookings"]}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      formatter={(value) => (
+                        <span className="text-sm text-muted-foreground">{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                No booking data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* User Role Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              User Roles
+            </CardTitle>
+            <CardDescription>Distribution of user roles</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {roleDistribution.length > 0 ? (
+              <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={roleDistribution} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="role"
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [value, "Users"]}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      {roleDistribution.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={ROLE_COLORS[entry.role.toLowerCase()] || "hsl(var(--primary))"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                No role data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Platform Health & Revenue */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
