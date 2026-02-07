@@ -1,18 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Search, User, ChevronDown } from "lucide-react";
+import { Menu, X, Search, User, LogOut, LayoutDashboard } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import logo from "@/assets/logo.jpeg";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut, loading } = useAuth();
 
   const navLinks = [
     { label: "Find Cleaners", href: "/search" },
-    { label: "Post a Job", href: "/post-job" },
     { label: "How It Works", href: "/#how-it-works" },
-    { label: "For Cleaners", href: "/for-cleaners" },
   ];
+
+  const getInitials = (email: string) => {
+    return email.charAt(0).toUpperCase();
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
@@ -38,16 +50,59 @@ const Header = () => {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-4">
-            <Button variant="ghost" size="sm">
-              <Search className="h-4 w-4 mr-2" />
-              Search
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/search">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Link>
             </Button>
-            <Button variant="outline" size="sm">
-              Log In
-            </Button>
-            <Button variant="cta" size="sm">
-              Sign Up
-            </Button>
+            
+            {!loading && (
+              <>
+                {user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                            {getInitials(user.email || "U")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="hidden sm:inline">Account</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard" className="flex items-center gap-2">
+                          <LayoutDashboard className="h-4 w-4" />
+                          Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard/profile" className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Profile
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 text-destructive">
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/auth">Log In</Link>
+                    </Button>
+                    <Button variant="cta" size="sm" asChild>
+                      <Link to="/auth">Sign Up</Link>
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -73,14 +128,34 @@ const Header = () => {
                   {link.label}
                 </Link>
               ))}
-              <div className="flex flex-col gap-2 mt-4 px-4">
-                <Button variant="outline" className="w-full">
-                  Log In
-                </Button>
-                <Button variant="cta" className="w-full">
-                  Sign Up
-                </Button>
-              </div>
+              
+              {!loading && (
+                <div className="flex flex-col gap-2 mt-4 px-4">
+                  {user ? (
+                    <>
+                      <Button variant="outline" className="w-full" asChild>
+                        <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                          <LayoutDashboard className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full" onClick={() => { signOut(); setIsMenuOpen(false); }}>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" className="w-full" asChild>
+                        <Link to="/auth" onClick={() => setIsMenuOpen(false)}>Log In</Link>
+                      </Button>
+                      <Button variant="cta" className="w-full" asChild>
+                        <Link to="/auth" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
             </nav>
           </div>
         )}
