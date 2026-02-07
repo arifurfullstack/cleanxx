@@ -7,12 +7,12 @@ import {
   MapPin,
   Plus,
   CheckCircle,
-  AlertCircle,
   X,
+  Info,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +27,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 interface Booking {
   id: string;
@@ -53,6 +60,11 @@ const UpcomingBookings = () => {
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const { 
+    settings, 
+    formatCurrency, 
+    isCancellationAllowed 
+  } = usePlatformSettings();
 
   const fetchBookings = async () => {
     if (!user) return;
@@ -136,6 +148,13 @@ const UpcomingBookings = () => {
     }
   };
 
+  const canCancel = (booking: Booking) => {
+    return isCancellationAllowed(
+      new Date(booking.scheduled_date),
+      booking.scheduled_time
+    );
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -170,103 +189,128 @@ const UpcomingBookings = () => {
 
       {bookings.length > 0 ? (
         <div className="space-y-4">
-          {bookings.map((booking) => (
-            <Card key={booking.id}>
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                  <div className="flex-1 space-y-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-heading text-xl font-semibold">
-                        {booking.service_type}
-                      </h3>
-                      {getStatusBadge(booking.status)}
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-start gap-3">
-                        <CalendarDays className="h-5 w-5 text-primary mt-0.5" />
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(booking.scheduled_date), "EEEE, MMMM d, yyyy")}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {booking.scheduled_time} • {booking.duration_hours} hours
-                          </div>
-                        </div>
+          {bookings.map((booking) => {
+            const cancellationAllowed = canCancel(booking);
+            
+            return (
+              <Card key={booking.id}>
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="font-heading text-xl font-semibold">
+                          {booking.service_type}
+                        </h3>
+                        {getStatusBadge(booking.status)}
                       </div>
 
-                      {booking.addresses && (
+                      <div className="grid sm:grid-cols-2 gap-4 text-sm">
                         <div className="flex items-start gap-3">
-                          <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                          <CalendarDays className="h-5 w-5 text-primary mt-0.5" />
                           <div>
-                            <div className="font-medium">{booking.addresses.label}</div>
+                            <div className="font-medium">
+                              {format(new Date(booking.scheduled_date), "EEEE, MMMM d, yyyy")}
+                            </div>
                             <div className="text-muted-foreground">
-                              {booking.addresses.street_address}, {booking.addresses.city}
+                              {booking.scheduled_time} • {booking.duration_hours} hours
                             </div>
                           </div>
+                        </div>
+
+                        {booking.addresses && (
+                          <div className="flex items-start gap-3">
+                            <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                            <div>
+                              <div className="font-medium">{booking.addresses.label}</div>
+                              <div className="text-muted-foreground">
+                                {booking.addresses.street_address}, {booking.addresses.city}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {booking.cleaner_name && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Cleaner: </span>
+                          <span className="font-medium">{booking.cleaner_name}</span>
+                        </div>
+                      )}
+
+                      {booking.special_instructions && (
+                        <div className="text-sm p-3 bg-muted rounded-lg">
+                          <span className="font-medium">Special Instructions: </span>
+                          <span className="text-muted-foreground">{booking.special_instructions}</span>
                         </div>
                       )}
                     </div>
 
-                    {booking.cleaner_name && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Cleaner: </span>
-                        <span className="font-medium">{booking.cleaner_name}</span>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">
+                          {formatCurrency(booking.service_price)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Total</div>
                       </div>
-                    )}
 
-                    {booking.special_instructions && (
-                      <div className="text-sm p-3 bg-muted rounded-lg">
-                        <span className="font-medium">Special Instructions: </span>
-                        <span className="text-muted-foreground">{booking.special_instructions}</span>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Reschedule
+                        </Button>
+                        
+                        {cancellationAllowed ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel Booking?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel this booking? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleCancelBooking(booking.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Yes, Cancel
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  disabled 
+                                  className="text-muted-foreground"
+                                >
+                                  <Info className="h-4 w-4 mr-1" />
+                                  Cancel
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Cancellation not available within {settings.cancellation_window_hours} hours of appointment</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col items-end gap-3">
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
-                        ${booking.service_price}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total</div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Reschedule
-                      </Button>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                            <X className="h-4 w-4 mr-1" />
-                            Cancel
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Cancel Booking?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to cancel this booking? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Keep Booking</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleCancelBooking(booking.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Yes, Cancel
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>

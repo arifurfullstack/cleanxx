@@ -17,10 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, CalendarCheck, Loader2, DollarSign, Clock, User } from "lucide-react";
+import { Search, CalendarCheck, Loader2, DollarSign, Clock, User, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
@@ -43,6 +44,12 @@ const AdminBookings = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { 
+    settings, 
+    formatCurrency, 
+    calculateCommission,
+    calculateCleanerEarnings 
+  } = usePlatformSettings();
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -87,9 +94,11 @@ const AdminBookings = () => {
     }
   };
 
-  const totalRevenue = bookings
-    .filter((b) => b.status === "completed")
-    .reduce((sum, b) => sum + Number(b.service_price), 0);
+  // Calculate revenue metrics with commission
+  const completedBookings = bookings.filter((b) => b.status === "completed");
+  const totalGrossRevenue = completedBookings.reduce((sum, b) => sum + Number(b.service_price), 0);
+  const totalPlatformCommission = completedBookings.reduce((sum, b) => sum + calculateCommission(Number(b.service_price)), 0);
+  const totalCleanerPayouts = completedBookings.reduce((sum, b) => sum + calculateCleanerEarnings(Number(b.service_price)), 0);
 
   return (
     <div className="space-y-6">
@@ -99,11 +108,11 @@ const AdminBookings = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <CalendarCheck className="h-5 w-5 text-blue-600" />
+              <CalendarCheck className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-2xl font-bold">{bookings.length}</p>
                 <p className="text-sm text-muted-foreground">Total Bookings</p>
@@ -114,7 +123,7 @@ const AdminBookings = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-600" />
+              <Clock className="h-5 w-5 text-secondary" />
               <div>
                 <p className="text-2xl font-bold">
                   {bookings.filter((b) => b.status === "pending").length}
@@ -127,10 +136,10 @@ const AdminBookings = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-green-600" />
+              <User className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-2xl font-bold">
-                  {bookings.filter((b) => b.status === "completed").length}
+                  {completedBookings.length}
                 </p>
                 <p className="text-sm text-muted-foreground">Completed</p>
               </div>
@@ -140,10 +149,21 @@ const AdminBookings = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-purple-600" />
+              <DollarSign className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalGrossRevenue)}</p>
+                <p className="text-sm text-muted-foreground">Gross Revenue</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(totalPlatformCommission)}</p>
+                <p className="text-sm text-muted-foreground">Platform Earnings ({settings.platform_commission_rate}%)</p>
               </div>
             </div>
           </CardContent>
@@ -202,41 +222,55 @@ const AdminBookings = () => {
                     <TableHead>Cleaner</TableHead>
                     <TableHead>Date & Time</TableHead>
                     <TableHead>Price</TableHead>
+                    <TableHead>Commission</TableHead>
+                    <TableHead>Cleaner Payout</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{booking.service_type}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {booking.duration_hours} hours
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {booking.cleaner_name || "Not assigned"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>{format(new Date(booking.scheduled_date), "MMM d, yyyy")}</p>
-                          <p className="text-muted-foreground">{booking.scheduled_time}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">${Number(booking.service_price).toFixed(2)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(booking.status)}>
-                          {booking.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredBookings.map((booking) => {
+                    const price = Number(booking.service_price);
+                    const commission = calculateCommission(price);
+                    const cleanerPayout = calculateCleanerEarnings(price);
+                    
+                    return (
+                      <TableRow key={booking.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{booking.service_type}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {booking.duration_hours} hours
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {booking.cleaner_name || "Not assigned"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <p>{format(new Date(booking.scheduled_date), "MMM d, yyyy")}</p>
+                            <p className="text-muted-foreground">{booking.scheduled_time}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">{formatCurrency(price)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-primary font-medium">{formatCurrency(commission)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-muted-foreground">{formatCurrency(cleanerPayout)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(booking.status)}>
+                            {booking.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import {
   Star,
   MapPin,
@@ -10,13 +10,13 @@ import {
   Share2,
   CheckCircle,
   Phone,
-  Mail,
   Calendar as CalendarIcon,
   ChevronLeft,
   MessageSquare,
   ThumbsUp,
   Award,
   Leaf,
+  Info,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -40,7 +40,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 // Mock cleaner data
 const mockCleanerData = {
@@ -60,18 +68,19 @@ const mockCleanerData = {
   memberSince: "January 2022",
   completedJobs: 342,
   repeatClients: "89%",
+  hourlyRate: 45,
   description: `SparklePro Cleaning is a professional cleaning service dedicated to making your home or office spotless. With over 5 years of experience, we pride ourselves on attention to detail, reliability, and eco-friendly practices.
 
 Our team of trained professionals uses only the highest quality, environmentally safe products to ensure a clean that's safe for your family, pets, and the planet.
 
 We offer flexible scheduling, competitive pricing, and a 100% satisfaction guarantee. If you're not happy with our service, we'll come back and make it right - no questions asked.`,
   services: [
-    { name: "Standard Home Cleaning", price: 85, duration: "2-3 hours", description: "Complete cleaning of all rooms, kitchen, and bathrooms" },
-    { name: "Deep Cleaning", price: 150, duration: "4-5 hours", description: "Thorough cleaning including inside appliances, baseboards, and hard-to-reach areas" },
-    { name: "Move In/Out Cleaning", price: 200, duration: "5-6 hours", description: "Comprehensive cleaning for moving, including closets and cabinets" },
-    { name: "Airbnb/Rental Turnover", price: 95, duration: "2-3 hours", description: "Quick turnaround cleaning between guests" },
-    { name: "Office Cleaning", price: 120, duration: "2-4 hours", description: "Professional office and commercial space cleaning" },
-    { name: "Post-Construction", price: 250, duration: "6-8 hours", description: "Heavy-duty cleaning after renovation or construction" },
+    { name: "Standard Home Cleaning", pricePerHour: 45, description: "Complete cleaning of all rooms, kitchen, and bathrooms" },
+    { name: "Deep Cleaning", pricePerHour: 55, description: "Thorough cleaning including inside appliances, baseboards, and hard-to-reach areas" },
+    { name: "Move In/Out Cleaning", pricePerHour: 60, description: "Comprehensive cleaning for moving, including closets and cabinets" },
+    { name: "Airbnb/Rental Turnover", pricePerHour: 50, description: "Quick turnaround cleaning between guests" },
+    { name: "Office Cleaning", pricePerHour: 55, description: "Professional office and commercial space cleaning" },
+    { name: "Post-Construction", pricePerHour: 65, description: "Heavy-duty cleaning after renovation or construction" },
   ],
   addOns: [
     { name: "Inside Fridge", price: 25 },
@@ -147,11 +156,26 @@ We offer flexible scheduling, competitive pricing, and a 100% satisfaction guara
 const CleanerProfile = () => {
   const { id } = useParams();
   const cleaner = mockCleanerData; // In real app, fetch by id
+  
+  // Platform settings hook
+  const { 
+    settings, 
+    loading: settingsLoading, 
+    formatCurrency, 
+    calculateCommission,
+    currencySymbol 
+  } = usePlatformSettings();
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedService, setSelectedService] = useState("");
+  const [selectedHours, setSelectedHours] = useState(settings.min_booking_hours);
   const [isFavorited, setIsFavorited] = useState(false);
+
+  // Update selectedHours when settings load
+  if (!settingsLoading && selectedHours < settings.min_booking_hours) {
+    setSelectedHours(settings.min_booking_hours);
+  }
 
   const getDayOfWeek = (date: Date): keyof typeof cleaner.availability => {
     const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -163,6 +187,25 @@ const CleanerProfile = () => {
     : [];
 
   const selectedServiceData = cleaner.services.find(s => s.name === selectedService);
+  
+  // Calculate pricing with platform settings
+  const subtotal = selectedServiceData ? selectedServiceData.pricePerHour * selectedHours : 0;
+  const platformFee = calculateCommission(subtotal);
+  const total = subtotal + platformFee;
+
+  // Date validation based on platform settings
+  const today = new Date();
+  const maxBookingDate = addDays(today, settings.advance_booking_days);
+
+  const isDateDisabled = (date: Date) => {
+    // Past dates
+    if (date < today) return true;
+    // Beyond advance booking limit
+    if (date > maxBookingDate) return true;
+    // Sundays (no availability)
+    if (date.getDay() === 0) return true;
+    return false;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -262,7 +305,7 @@ const CleanerProfile = () => {
                           {badge.label}
                         </Badge>
                       ))}
-                      {cleaner.instantBooking && (
+                      {cleaner.instantBooking && settings.allow_instant_booking && (
                         <Badge variant="default" className="gap-1 bg-primary">
                           <CheckCircle className="h-3 w-3" />
                           Instant Booking
@@ -324,6 +367,9 @@ const CleanerProfile = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Services</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Book between {settings.min_booking_hours}-{settings.max_booking_hours} hours per session
+                    </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {cleaner.services.map((service) => (
@@ -334,14 +380,10 @@ const CleanerProfile = () => {
                         <div className="flex-1">
                           <h4 className="font-semibold text-foreground">{service.name}</h4>
                           <p className="text-sm text-muted-foreground">{service.description}</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {service.duration}
-                          </div>
                         </div>
                         <div className="flex items-center gap-4 mt-3 md:mt-0">
                           <span className="font-heading text-xl font-bold text-primary">
-                            ${service.price}
+                            {currencySymbol}{service.pricePerHour}/hr
                           </span>
                           <Button
                             variant="secondary"
@@ -368,7 +410,7 @@ const CleanerProfile = () => {
                           className="flex items-center justify-between p-3 rounded-lg border border-border"
                         >
                           <span className="text-foreground">{addon.name}</span>
-                          <span className="font-semibold text-primary">+${addon.price}</span>
+                          <span className="font-semibold text-primary">+{currencySymbol}{addon.price}</span>
                         </div>
                       ))}
                     </div>
@@ -420,56 +462,35 @@ const CleanerProfile = () => {
                             />
                           ))}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           {cleaner.reviewCount} reviews
-                        </div>
-                      </div>
-                      <div className="flex-1 w-full space-y-2">
-                        {[5, 4, 3, 2, 1].map((stars) => {
-                          const count = cleaner.reviewCount * (stars === 5 ? 0.7 : stars === 4 ? 0.2 : 0.1 / 3);
-                          const percentage = (count / cleaner.reviewCount) * 100;
-                          return (
-                            <div key={stars} className="flex items-center gap-2">
-                              <span className="text-sm w-3">{stars}</span>
-                              <Star className="h-3 w-3 fill-accent text-accent" />
-                              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-accent rounded-full"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                              <span className="text-sm text-muted-foreground w-12">
-                                {Math.round(percentage)}%
-                              </span>
-                            </div>
-                          );
-                        })}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Individual Reviews */}
+                {/* Reviews List */}
                 <div className="space-y-4">
                   {cleaner.reviews.map((review) => (
                     <Card key={review.id}>
                       <CardContent className="p-6">
-                        <div className="flex gap-4">
+                        <div className="flex items-start gap-4">
                           <img
                             src={review.avatar}
                             alt={review.author}
                             className="w-12 h-12 rounded-full object-cover"
                           />
                           <div className="flex-1">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <h4 className="font-semibold text-foreground">{review.author}</h4>
+                                <h4 className="font-semibold text-foreground">
+                                  {review.author}
+                                </h4>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <span>{review.date}</span>
+                                  <span>{review.service}</span>
                                   <span>•</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {review.service}
-                                  </Badge>
+                                  <span>{review.date}</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">
@@ -487,10 +508,10 @@ const CleanerProfile = () => {
                               </div>
                             </div>
                             <p className="mt-3 text-muted-foreground">{review.comment}</p>
-                            <button className="flex items-center gap-1 mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            <Button variant="ghost" size="sm" className="mt-3 gap-1">
                               <ThumbsUp className="h-4 w-4" />
                               Helpful ({review.helpful})
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -513,7 +534,7 @@ const CleanerProfile = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Book This Cleaner</span>
-                    {cleaner.instantBooking && (
+                    {cleaner.instantBooking && settings.allow_instant_booking && (
                       <Badge variant="secondary" className="gap-1">
                         <CheckCircle className="h-3 w-3" />
                         Instant
@@ -532,16 +553,49 @@ const CleanerProfile = () => {
                       <SelectContent>
                         {cleaner.services.map((service) => (
                           <SelectItem key={service.name} value={service.name}>
-                            {service.name} - ${service.price}
+                            {service.name} - {currencySymbol}{service.pricePerHour}/hr
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
+                  {/* Hours Selection */}
+                  {selectedService && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Duration</Label>
+                        <span className="text-sm font-medium">{selectedHours} hours</span>
+                      </div>
+                      <Slider
+                        value={[selectedHours]}
+                        onValueChange={(value) => setSelectedHours(value[0])}
+                        min={settings.min_booking_hours}
+                        max={settings.max_booking_hours}
+                        step={1}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Min: {settings.min_booking_hours}h • Max: {settings.max_booking_hours}h
+                      </p>
+                    </div>
+                  )}
+
                   {/* Date Picker */}
                   <div className="space-y-2">
-                    <Label>Select Date</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Select Date</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Book up to {settings.advance_booking_days} days in advance</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -563,7 +617,7 @@ const CleanerProfile = () => {
                             setSelectedDate(date);
                             setSelectedTime("");
                           }}
-                          disabled={(date) => date < new Date() || date.getDay() === 0}
+                          disabled={isDateDisabled}
                           initialFocus
                           className="p-3 pointer-events-auto"
                         />
@@ -616,12 +670,30 @@ const CleanerProfile = () => {
                   {selectedServiceData && (
                     <div className="pt-4 border-t border-border space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{selectedServiceData.name}</span>
-                        <span>${selectedServiceData.price}</span>
+                        <span className="text-muted-foreground">
+                          {selectedServiceData.name} ({selectedHours}h × {currencySymbol}{selectedServiceData.pricePerHour})
+                        </span>
+                        <span>{formatCurrency(subtotal)}</span>
                       </div>
-                      <div className="flex justify-between font-semibold text-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          Platform fee ({settings.platform_commission_rate}%)
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>This fee helps us maintain the platform and provide support</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </span>
+                        <span>{formatCurrency(platformFee)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border">
                         <span>Total</span>
-                        <span className="text-primary">${selectedServiceData.price}</span>
+                        <span className="text-primary">{formatCurrency(total)}</span>
                       </div>
                     </div>
                   )}
@@ -633,11 +705,11 @@ const CleanerProfile = () => {
                     variant="cta"
                     disabled={!selectedService || !selectedDate || !selectedTime}
                   >
-                    {cleaner.instantBooking ? "Book Now" : "Request Booking"}
+                    {cleaner.instantBooking && settings.allow_instant_booking ? "Book Now" : "Request Booking"}
                   </Button>
 
                   <p className="text-xs text-center text-muted-foreground">
-                    Free cancellation up to 24 hours before the appointment
+                    Free cancellation up to {settings.cancellation_window_hours} hours before the appointment
                   </p>
                 </CardContent>
               </Card>
