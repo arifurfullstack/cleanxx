@@ -49,6 +49,8 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { PaymentMethod } from "@/hooks/usePaymentSettings";
+import PaymentMethodSelector from "@/components/booking/PaymentMethodSelector";
 
 // Mock cleaner data
 const mockCleanerData = {
@@ -170,6 +172,7 @@ const CleanerProfile = () => {
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [selectedHours, setSelectedHours] = useState(settings.min_booking_hours);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
 
   // Update selectedHours when settings load
@@ -666,6 +669,12 @@ const CleanerProfile = () => {
                     />
                   </div>
 
+                  {/* Payment Method Selection */}
+                  <PaymentMethodSelector
+                    selectedMethod={selectedPaymentMethod}
+                    onMethodChange={setSelectedPaymentMethod}
+                  />
+
                   {/* Price Summary */}
                   {selectedServiceData && (
                     <div className="pt-4 border-t border-border space-y-2">
@@ -703,9 +712,11 @@ const CleanerProfile = () => {
                     className="w-full"
                     size="lg"
                     variant="cta"
-                    disabled={!selectedService || !selectedDate || !selectedTime}
+                    disabled={!selectedService || !selectedDate || !selectedTime || !selectedPaymentMethod}
                   >
-                    {cleaner.instantBooking && settings.allow_instant_booking ? "Book Now" : "Request Booking"}
+                    {cleaner.instantBooking && settings.allow_instant_booking && selectedPaymentMethod === "stripe" 
+                      ? "Book Now" 
+                      : "Request Booking"}
                   </Button>
 
                   <p className="text-xs text-center text-muted-foreground">
