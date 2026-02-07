@@ -18,7 +18,7 @@ import {
   Legend,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
+import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, subMonths } from "date-fns";
 
 interface DashboardStats {
   totalUsers: number;
@@ -32,6 +32,11 @@ interface BookingsByDate {
   bookings: number;
 }
 
+interface RevenueByDate {
+  date: string;
+  revenue: number;
+}
+
 interface BookingStatusData {
   name: string;
   value: number;
@@ -41,6 +46,12 @@ interface BookingStatusData {
 interface RoleDistribution {
   role: string;
   count: number;
+}
+
+interface RevenueSummary {
+  thisMonth: number;
+  lastMonth: number;
+  total: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -66,8 +77,10 @@ const AdminDashboardOverview = () => {
     pendingBookings: 0,
   });
   const [bookingsTrend, setBookingsTrend] = useState<BookingsByDate[]>([]);
+  const [revenueTrend, setRevenueTrend] = useState<RevenueByDate[]>([]);
   const [bookingStatuses, setBookingStatuses] = useState<BookingStatusData[]>([]);
   const [roleDistribution, setRoleDistribution] = useState<RoleDistribution[]>([]);
+  const [revenueSummary, setRevenueSummary] = useState<RevenueSummary>({ thisMonth: 0, lastMonth: 0, total: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,6 +89,7 @@ const AdminDashboardOverview = () => {
         await Promise.all([
           fetchStats(),
           fetchBookingsTrend(),
+          fetchRevenueTrend(),
           fetchBookingStatuses(),
           fetchRoleDistribution(),
         ]);
@@ -132,6 +146,65 @@ const AdminDashboardOverview = () => {
     }));
 
     setBookingsTrend(trendData);
+  };
+
+  const fetchRevenueTrend = async () => {
+    const thirtyDaysAgo = subDays(new Date(), 30);
+    const thisMonthStart = startOfMonth(new Date());
+    const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
+    const lastMonthEnd = subDays(thisMonthStart, 1);
+    
+    // Fetch completed bookings for revenue
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .select("scheduled_date, service_price, status")
+      .eq("status", "completed");
+
+    // Calculate revenue summary
+    let thisMonthRevenue = 0;
+    let lastMonthRevenue = 0;
+    let totalRevenue = 0;
+
+    bookings?.forEach((booking) => {
+      const bookingDate = new Date(booking.scheduled_date);
+      const price = Number(booking.service_price);
+      totalRevenue += price;
+
+      if (bookingDate >= thisMonthStart) {
+        thisMonthRevenue += price;
+      } else if (bookingDate >= lastMonthStart && bookingDate <= lastMonthEnd) {
+        lastMonthRevenue += price;
+      }
+    });
+
+    setRevenueSummary({
+      thisMonth: thisMonthRevenue,
+      lastMonth: lastMonthRevenue,
+      total: totalRevenue,
+    });
+
+    // Create date range for last 30 days
+    const dateRange = eachDayOfInterval({
+      start: thirtyDaysAgo,
+      end: new Date(),
+    });
+
+    // Calculate revenue per day
+    const revenueCounts = new Map<string, number>();
+    bookings?.forEach((booking) => {
+      const date = format(new Date(booking.scheduled_date), "yyyy-MM-dd");
+      const dateObj = new Date(booking.scheduled_date);
+      if (dateObj >= thirtyDaysAgo) {
+        revenueCounts.set(date, (revenueCounts.get(date) || 0) + Number(booking.service_price));
+      }
+    });
+
+    const trendData = dateRange.map((date) => ({
+      date: format(date, "MMM dd"),
+      revenue: revenueCounts.get(format(date, "yyyy-MM-dd")) || 0,
+    }));
+
+    setRevenueTrend(trendData);
   };
 
   const fetchBookingStatuses = async () => {
@@ -207,6 +280,10 @@ const AdminDashboardOverview = () => {
       label: "Bookings",
       color: "hsl(var(--primary))",
     },
+    revenue: {
+      label: "Revenue",
+      color: "hsl(var(--chart-2))",
+    },
   };
 
   return (
@@ -279,6 +356,58 @@ const AdminDashboardOverview = () => {
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorBookings)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Revenue Trend Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            Revenue Analytics (Last 30 Days)
+          </CardTitle>
+          <CardDescription>Daily earnings from completed bookings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-muted-foreground"
+                />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-muted-foreground"
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="hsl(var(--chart-2))"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorRevenue)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -435,15 +564,15 @@ const AdminDashboardOverview = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">This Month</span>
-                <span className="text-sm font-medium">$0.00</span>
+                <span className="text-sm font-medium">${revenueSummary.thisMonth.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Last Month</span>
-                <span className="text-sm font-medium">$0.00</span>
+                <span className="text-sm font-medium">${revenueSummary.lastMonth.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Total Revenue</span>
-                <span className="text-sm font-medium">$0.00</span>
+                <span className="text-sm font-medium text-primary">${revenueSummary.total.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
