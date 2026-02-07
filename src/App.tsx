@@ -29,6 +29,7 @@ import AdminUsers from "./pages/admin-dashboard/AdminUsers";
 import AdminCleaners from "./pages/admin-dashboard/AdminCleaners";
 import AdminBookings from "./pages/admin-dashboard/AdminBookings";
 import AdminPaymentGateway from "./pages/admin-dashboard/AdminPaymentGateway";
+import AdminPaymentVerification from "./pages/admin-dashboard/AdminPaymentVerification";
 import AdminSettings from "./pages/admin-dashboard/AdminSettings";
 import NotFound from "./pages/NotFound";
 
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="cleaners" element={<AdminCleaners />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="payment-gateway" element={<AdminPaymentGateway />} />
+              <Route path="payment-verification" element={<AdminPaymentVerification />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             
