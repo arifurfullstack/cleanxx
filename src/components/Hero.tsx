@@ -1,10 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Star, Shield, Clock } from "lucide-react";
 import heroImage from "@/assets/hero-cleaning.jpg";
 
 const Hero = () => {
   const [location, setLocation] = useState("");
+  const navigate = useNavigate();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate(`/search?location=${encodeURIComponent(location)}`);
+  };
 
   const stats = [
     { icon: Star, value: "4.9", label: "Average Rating" },
@@ -40,7 +47,7 @@ const Hero = () => {
             </p>
 
             {/* Search Box */}
-            <div className="bg-card rounded-2xl p-2 shadow-card-hover max-w-xl mx-auto lg:mx-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <form onSubmit={handleSearch} className="bg-card rounded-2xl p-2 shadow-card-hover max-w-xl mx-auto lg:mx-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1 relative">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -52,12 +59,12 @@ const Hero = () => {
                     className="w-full h-12 pl-12 pr-4 bg-muted rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
-                <Button variant="hero" size="lg" className="px-8">
+                <Button type="submit" variant="hero" size="lg" className="px-8">
                   <Search className="h-5 w-5 mr-2" />
                   Search
                 </Button>
               </div>
-            </div>
+            </form>
 
             {/* Quick Categories */}
             <div className="flex flex-wrap justify-center lg:justify-start gap-2 mt-6 animate-fade-in" style={{ animationDelay: "0.4s" }}>
