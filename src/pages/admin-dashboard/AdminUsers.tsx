@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -17,11 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, UserCircle, Mail, Calendar, Loader2 } from "lucide-react";
+import { Search, UserCircle, Mail, Calendar, Loader2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { EditUserDialog } from "@/components/admin-dashboard/EditUserDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -45,6 +47,8 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingRoles, setUpdatingRoles] = useState<Set<string>>(new Set());
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -124,6 +128,21 @@ const AdminUsers = () => {
     }
   };
 
+  const handleEditUser = (user: UserWithRole) => {
+    setEditingUser(user);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUserUpdated = (updatedUser: { id: string; email: string | null; full_name: string | null; phone: string | null }) => {
+    setUsers((prev) =>
+      prev.map((user) =>
+        user.id === updatedUser.id
+          ? { ...user, ...updatedUser }
+          : user
+      )
+    );
+  };
+
   const filteredUsers = users.filter(
     (user) =>
       user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -187,6 +206,7 @@ const AdminUsers = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -245,6 +265,16 @@ const AdminUsers = () => {
                           {format(new Date(user.created_at), "MMM d, yyyy")}
                         </div>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -253,6 +283,13 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      <EditUserDialog
+        user={editingUser}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onUserUpdated={handleUserUpdated}
+      />
     </div>
   );
 };
