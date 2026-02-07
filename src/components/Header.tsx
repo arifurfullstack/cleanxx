@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Search, User, LogOut, LayoutDashboard, Briefcase } from "lucide-react";
+import { Menu, X, Search, User, LogOut, LayoutDashboard, Briefcase, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import logo from "@/assets/logo.jpeg";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut, loading, role } = useAuth();
 
   const navLinks = [
     { label: "Find Cleaners", href: "/search" },
@@ -73,18 +73,31 @@ const Header = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                      {role === "admin" && (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link to="/admin/dashboard" className="flex items-center gap-2 text-destructive">
+                              <Shield className="h-4 w-4" />
+                              Admin Panel
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
                       <DropdownMenuItem asChild>
                         <Link to="/dashboard" className="flex items-center gap-2">
                           <LayoutDashboard className="h-4 w-4" />
                           My Dashboard
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/cleaner/dashboard" className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4" />
-                          Cleaner Portal
-                        </Link>
-                      </DropdownMenuItem>
+                      {role === "cleaner" && (
+                        <DropdownMenuItem asChild>
+                          <Link to="/cleaner/dashboard" className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4" />
+                            Cleaner Portal
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem asChild>
                         <Link to="/dashboard/profile" className="flex items-center gap-2">
                           <User className="h-4 w-4" />

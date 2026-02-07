@@ -23,6 +23,12 @@ import CleanerSchedule from "./pages/cleaner-dashboard/CleanerSchedule";
 import CleanerProfile from "./pages/cleaner-dashboard/CleanerProfile";
 import CleanerEarnings from "./pages/cleaner-dashboard/CleanerEarnings";
 import CleanerSettings from "./pages/cleaner-dashboard/CleanerSettings";
+import AdminDashboardLayout from "./components/admin-dashboard/AdminDashboardLayout";
+import AdminDashboardOverview from "./pages/admin-dashboard/AdminDashboardOverview";
+import AdminUsers from "./pages/admin-dashboard/AdminUsers";
+import AdminCleaners from "./pages/admin-dashboard/AdminCleaners";
+import AdminBookings from "./pages/admin-dashboard/AdminBookings";
+import AdminSettings from "./pages/admin-dashboard/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +65,15 @@ const App = () => (
               <Route path="profile" element={<CleanerProfile />} />
               <Route path="earnings" element={<CleanerEarnings />} />
               <Route path="settings" element={<CleanerSettings />} />
+            </Route>
+
+            {/* Admin Dashboard Routes */}
+            <Route path="/admin" element={<AdminDashboardLayout />}>
+              <Route path="dashboard" element={<AdminDashboardOverview />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="cleaners" element={<AdminCleaners />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
