@@ -44,10 +44,16 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
 
+  // Helper to get dashboard path based on user role
+  const getDashboardPath = (userMetadata: Record<string, unknown> | undefined) => {
+    const accountType = userMetadata?.account_type;
+    return accountType === "cleaner" ? "/cleaner/dashboard" : "/dashboard";
+  };
+
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !authLoading) {
-      navigate("/dashboard");
+      navigate(getDashboardPath(user.user_metadata));
     }
   }, [user, authLoading, navigate]);
 
@@ -79,7 +85,7 @@ const Auth = () => {
         title: "Welcome back!",
         description: "You have been logged in successfully.",
       });
-      navigate("/dashboard");
+      // Redirect will happen via useEffect when user state updates
     }
   };
 
