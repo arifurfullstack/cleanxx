@@ -174,41 +174,83 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          advance_booking_days: number
+          allow_instant_booking: boolean
+          auto_approve_cleaners: boolean
+          cancellation_window_hours: number
+          default_currency: string
           id: string
           maintenance_mode: boolean
+          max_booking_hours: number
+          max_hourly_rate: number
+          min_booking_hours: number
+          min_hourly_rate: number
           notify_cleaner_applications: boolean
           notify_new_bookings: boolean
           notify_new_users: boolean
+          platform_commission_rate: number
           platform_name: string
+          privacy_url: string | null
           require_2fa_admins: boolean
+          require_cleaner_verification: boolean
           require_email_verification: boolean
+          site_tagline: string | null
           support_email: string | null
+          terms_url: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          advance_booking_days?: number
+          allow_instant_booking?: boolean
+          auto_approve_cleaners?: boolean
+          cancellation_window_hours?: number
+          default_currency?: string
           id?: string
           maintenance_mode?: boolean
+          max_booking_hours?: number
+          max_hourly_rate?: number
+          min_booking_hours?: number
+          min_hourly_rate?: number
           notify_cleaner_applications?: boolean
           notify_new_bookings?: boolean
           notify_new_users?: boolean
+          platform_commission_rate?: number
           platform_name?: string
+          privacy_url?: string | null
           require_2fa_admins?: boolean
+          require_cleaner_verification?: boolean
           require_email_verification?: boolean
+          site_tagline?: string | null
           support_email?: string | null
+          terms_url?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          advance_booking_days?: number
+          allow_instant_booking?: boolean
+          auto_approve_cleaners?: boolean
+          cancellation_window_hours?: number
+          default_currency?: string
           id?: string
           maintenance_mode?: boolean
+          max_booking_hours?: number
+          max_hourly_rate?: number
+          min_booking_hours?: number
+          min_hourly_rate?: number
           notify_cleaner_applications?: boolean
           notify_new_bookings?: boolean
           notify_new_users?: boolean
+          platform_commission_rate?: number
           platform_name?: string
+          privacy_url?: string | null
           require_2fa_admins?: boolean
+          require_cleaner_verification?: boolean
           require_email_verification?: boolean
+          site_tagline?: string | null
           support_email?: string | null
+          terms_url?: string | null
           updated_at?: string
           updated_by?: string | null
         }

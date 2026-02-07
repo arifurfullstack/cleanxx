@@ -5,7 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Bell, Shield, Database, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Settings, 
+  Bell, 
+  Shield, 
+  Database, 
+  Loader2, 
+  CheckCircle, 
+  XCircle,
+  DollarSign,
+  Calendar,
+  FileText,
+  Users
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -21,6 +34,21 @@ interface PlatformSettings {
   require_email_verification: boolean;
   require_2fa_admins: boolean;
   updated_at: string;
+  // New fields
+  platform_commission_rate: number;
+  min_booking_hours: number;
+  max_booking_hours: number;
+  cancellation_window_hours: number;
+  advance_booking_days: number;
+  min_hourly_rate: number;
+  max_hourly_rate: number;
+  default_currency: string;
+  site_tagline: string | null;
+  terms_url: string | null;
+  privacy_url: string | null;
+  allow_instant_booking: boolean;
+  require_cleaner_verification: boolean;
+  auto_approve_cleaners: boolean;
 }
 
 const AdminSettings = () => {
@@ -31,15 +59,41 @@ const AdminSettings = () => {
   const [dbStatus, setDbStatus] = useState<"connected" | "error" | "checking">("checking");
   const [authStatus, setAuthStatus] = useState<"active" | "error" | "checking">("checking");
 
-  // Form state
+  // Platform Settings
   const [platformName, setPlatformName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [siteTagline, setSiteTagline] = useState("");
+
+  // Notification Settings
   const [notifyNewUsers, setNotifyNewUsers] = useState(true);
   const [notifyNewBookings, setNotifyNewBookings] = useState(true);
   const [notifyCleanerApps, setNotifyCleanerApps] = useState(true);
+
+  // Security Settings
   const [requireEmailVerification, setRequireEmailVerification] = useState(true);
   const [require2faAdmins, setRequire2faAdmins] = useState(false);
+
+  // Commission & Pricing Settings
+  const [commissionRate, setCommissionRate] = useState(10);
+  const [minHourlyRate, setMinHourlyRate] = useState(25);
+  const [maxHourlyRate, setMaxHourlyRate] = useState(150);
+  const [defaultCurrency, setDefaultCurrency] = useState("CAD");
+
+  // Booking Settings
+  const [minBookingHours, setMinBookingHours] = useState(2);
+  const [maxBookingHours, setMaxBookingHours] = useState(8);
+  const [cancellationWindow, setCancellationWindow] = useState(24);
+  const [advanceBookingDays, setAdvanceBookingDays] = useState(30);
+  const [allowInstantBooking, setAllowInstantBooking] = useState(true);
+
+  // Cleaner Settings
+  const [requireCleanerVerification, setRequireCleanerVerification] = useState(true);
+  const [autoApproveCleaners, setAutoApproveCleaners] = useState(false);
+
+  // Legal Links
+  const [termsUrl, setTermsUrl] = useState("");
+  const [privacyUrl, setPrivacyUrl] = useState("");
 
   useEffect(() => {
     fetchSettings();
@@ -56,15 +110,36 @@ const AdminSettings = () => {
       if (error) throw error;
 
       if (data) {
-        setSettings(data);
+        setSettings(data as PlatformSettings);
+        // Platform
         setPlatformName(data.platform_name);
         setSupportEmail(data.support_email || "");
         setMaintenanceMode(data.maintenance_mode);
+        setSiteTagline(data.site_tagline || "");
+        // Notifications
         setNotifyNewUsers(data.notify_new_users);
         setNotifyNewBookings(data.notify_new_bookings);
         setNotifyCleanerApps(data.notify_cleaner_applications);
+        // Security
         setRequireEmailVerification(data.require_email_verification);
         setRequire2faAdmins(data.require_2fa_admins);
+        // Commission & Pricing
+        setCommissionRate(data.platform_commission_rate);
+        setMinHourlyRate(data.min_hourly_rate);
+        setMaxHourlyRate(data.max_hourly_rate);
+        setDefaultCurrency(data.default_currency);
+        // Booking
+        setMinBookingHours(data.min_booking_hours);
+        setMaxBookingHours(data.max_booking_hours);
+        setCancellationWindow(data.cancellation_window_hours);
+        setAdvanceBookingDays(data.advance_booking_days);
+        setAllowInstantBooking(data.allow_instant_booking);
+        // Cleaner
+        setRequireCleanerVerification(data.require_cleaner_verification);
+        setAutoApproveCleaners(data.auto_approve_cleaners);
+        // Legal
+        setTermsUrl(data.terms_url || "");
+        setPrivacyUrl(data.privacy_url || "");
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -75,7 +150,6 @@ const AdminSettings = () => {
   };
 
   const checkSystemStatus = async () => {
-    // Check database connectivity
     try {
       const { error } = await supabase.from("profiles").select("id").limit(1);
       setDbStatus(error ? "error" : "connected");
@@ -83,10 +157,9 @@ const AdminSettings = () => {
       setDbStatus("error");
     }
 
-    // Check auth service
     try {
       const { data } = await supabase.auth.getSession();
-      setAuthStatus(data.session ? "active" : "active"); // If we got a response, auth is working
+      setAuthStatus(data.session ? "active" : "active");
     } catch {
       setAuthStatus("error");
     }
@@ -103,11 +176,25 @@ const AdminSettings = () => {
           platform_name: platformName,
           support_email: supportEmail || null,
           maintenance_mode: maintenanceMode,
+          site_tagline: siteTagline || null,
           notify_new_users: notifyNewUsers,
           notify_new_bookings: notifyNewBookings,
           notify_cleaner_applications: notifyCleanerApps,
           require_email_verification: requireEmailVerification,
           require_2fa_admins: require2faAdmins,
+          platform_commission_rate: commissionRate,
+          min_hourly_rate: minHourlyRate,
+          max_hourly_rate: maxHourlyRate,
+          default_currency: defaultCurrency,
+          min_booking_hours: minBookingHours,
+          max_booking_hours: maxBookingHours,
+          cancellation_window_hours: cancellationWindow,
+          advance_booking_days: advanceBookingDays,
+          allow_instant_booking: allowInstantBooking,
+          require_cleaner_verification: requireCleanerVerification,
+          auto_approve_cleaners: autoApproveCleaners,
+          terms_url: termsUrl || null,
+          privacy_url: privacyUrl || null,
           updated_by: user?.id,
         })
         .eq("id", settings.id);
@@ -115,7 +202,7 @@ const AdminSettings = () => {
       if (error) throw error;
 
       toast.success("Settings saved successfully");
-      fetchSettings(); // Refresh to get updated_at
+      fetchSettings();
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error("Failed to save settings");
@@ -128,11 +215,25 @@ const AdminSettings = () => {
     platformName !== settings.platform_name ||
     supportEmail !== (settings.support_email || "") ||
     maintenanceMode !== settings.maintenance_mode ||
+    siteTagline !== (settings.site_tagline || "") ||
     notifyNewUsers !== settings.notify_new_users ||
     notifyNewBookings !== settings.notify_new_bookings ||
     notifyCleanerApps !== settings.notify_cleaner_applications ||
     requireEmailVerification !== settings.require_email_verification ||
-    require2faAdmins !== settings.require_2fa_admins
+    require2faAdmins !== settings.require_2fa_admins ||
+    commissionRate !== settings.platform_commission_rate ||
+    minHourlyRate !== settings.min_hourly_rate ||
+    maxHourlyRate !== settings.max_hourly_rate ||
+    defaultCurrency !== settings.default_currency ||
+    minBookingHours !== settings.min_booking_hours ||
+    maxBookingHours !== settings.max_booking_hours ||
+    cancellationWindow !== settings.cancellation_window_hours ||
+    advanceBookingDays !== settings.advance_booking_days ||
+    allowInstantBooking !== settings.allow_instant_booking ||
+    requireCleanerVerification !== settings.require_cleaner_verification ||
+    autoApproveCleaners !== settings.auto_approve_cleaners ||
+    termsUrl !== (settings.terms_url || "") ||
+    privacyUrl !== (settings.privacy_url || "")
   );
 
   if (loading) {
@@ -182,6 +283,15 @@ const AdminSettings = () => {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="site-tagline">Site Tagline</Label>
+              <Input
+                id="site-tagline"
+                value={siteTagline}
+                onChange={(e) => setSiteTagline(e.target.value)}
+                placeholder="Your platform tagline"
+              />
+            </div>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Maintenance Mode</Label>
@@ -192,6 +302,189 @@ const AdminSettings = () => {
               <Switch
                 checked={maintenanceMode}
                 onCheckedChange={setMaintenanceMode}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Commission & Pricing Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Commission & Pricing
+            </CardTitle>
+            <CardDescription>Configure platform fees and pricing limits</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="commission-rate">Platform Commission (%)</Label>
+                <Input
+                  id="commission-rate"
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Percentage taken from each booking
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="default-currency">Default Currency</Label>
+                <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                    <SelectItem value="USD">USD - US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Separator />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="min-hourly-rate">Minimum Hourly Rate</Label>
+                <Input
+                  id="min-hourly-rate"
+                  type="number"
+                  min="0"
+                  value={minHourlyRate}
+                  onChange={(e) => setMinHourlyRate(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-hourly-rate">Maximum Hourly Rate</Label>
+                <Input
+                  id="max-hourly-rate"
+                  type="number"
+                  min="0"
+                  value={maxHourlyRate}
+                  onChange={(e) => setMaxHourlyRate(Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Booking Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Booking Settings
+            </CardTitle>
+            <CardDescription>Configure booking policies and limits</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="min-booking-hours">Minimum Booking Hours</Label>
+                <Input
+                  id="min-booking-hours"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={minBookingHours}
+                  onChange={(e) => setMinBookingHours(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-booking-hours">Maximum Booking Hours</Label>
+                <Input
+                  id="max-booking-hours"
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={maxBookingHours}
+                  onChange={(e) => setMaxBookingHours(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="cancellation-window">Cancellation Window (hours)</Label>
+                <Input
+                  id="cancellation-window"
+                  type="number"
+                  min="0"
+                  value={cancellationWindow}
+                  onChange={(e) => setCancellationWindow(Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Hours before booking that cancellation is allowed
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="advance-booking-days">Advance Booking Limit (days)</Label>
+                <Input
+                  id="advance-booking-days"
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={advanceBookingDays}
+                  onChange={(e) => setAdvanceBookingDays(Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  How far in advance customers can book
+                </p>
+              </div>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Allow Instant Booking</Label>
+                <p className="text-sm text-muted-foreground">
+                  Let customers book without cleaner approval
+                </p>
+              </div>
+              <Switch
+                checked={allowInstantBooking}
+                onCheckedChange={setAllowInstantBooking}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cleaner Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Cleaner Settings
+            </CardTitle>
+            <CardDescription>Configure cleaner onboarding and verification</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Require Cleaner Verification</Label>
+                <p className="text-sm text-muted-foreground">
+                  Cleaners must be verified before accepting bookings
+                </p>
+              </div>
+              <Switch
+                checked={requireCleanerVerification}
+                onCheckedChange={setRequireCleanerVerification}
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Auto-Approve New Cleaners</Label>
+                <p className="text-sm text-muted-foreground">
+                  Automatically approve cleaner registrations
+                </p>
+              </div>
+              <Switch
+                checked={autoApproveCleaners}
+                onCheckedChange={setAutoApproveCleaners}
               />
             </div>
           </CardContent>
@@ -286,7 +579,42 @@ const AdminSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Database Info */}
+        {/* Legal Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Legal & Compliance
+            </CardTitle>
+            <CardDescription>Configure legal document links</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="terms-url">Terms of Service URL</Label>
+                <Input
+                  id="terms-url"
+                  type="url"
+                  value={termsUrl}
+                  onChange={(e) => setTermsUrl(e.target.value)}
+                  placeholder="https://example.com/terms"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="privacy-url">Privacy Policy URL</Label>
+                <Input
+                  id="privacy-url"
+                  type="url"
+                  value={privacyUrl}
+                  onChange={(e) => setPrivacyUrl(e.target.value)}
+                  placeholder="https://example.com/privacy"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* System Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
