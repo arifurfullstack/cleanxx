@@ -172,6 +172,48 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          id: string
+          maintenance_mode: boolean
+          notify_cleaner_applications: boolean
+          notify_new_bookings: boolean
+          notify_new_users: boolean
+          platform_name: string
+          require_2fa_admins: boolean
+          require_email_verification: boolean
+          support_email: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          maintenance_mode?: boolean
+          notify_cleaner_applications?: boolean
+          notify_new_bookings?: boolean
+          notify_new_users?: boolean
+          platform_name?: string
+          require_2fa_admins?: boolean
+          require_email_verification?: boolean
+          support_email?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          maintenance_mode?: boolean
+          notify_cleaner_applications?: boolean
+          notify_new_bookings?: boolean
+          notify_new_users?: boolean
+          platform_name?: string
+          require_2fa_admins?: boolean
+          require_email_verification?: boolean
+          support_email?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
