@@ -71,6 +71,7 @@ const Hero = () => {
               {["Home Cleaning", "Office", "Deep Clean", "Move-in/out", "Airbnb"].map((cat) => (
                 <button
                   key={cat}
+                  onClick={() => navigate(`/search?service=${encodeURIComponent(cat)}`)}
                   className="px-4 py-2 bg-card hover:bg-primary hover:text-primary-foreground rounded-full text-sm font-medium text-muted-foreground transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   {cat}

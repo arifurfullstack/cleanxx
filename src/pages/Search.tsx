@@ -138,9 +138,10 @@ const Search = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   
+  const initialService = searchParams.get("service");
   const [filters, setFilters] = useState<FilterState>({
     location: searchParams.get("location") || "",
-    serviceTypes: [],
+    serviceTypes: initialService ? [initialService] : [],
     minRating: 0,
     priceRange: [0, 500],
     verifiedOnly: false,
