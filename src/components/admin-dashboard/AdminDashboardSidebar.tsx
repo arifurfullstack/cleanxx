@@ -6,7 +6,8 @@ import {
   Settings, 
   Shield,
   LogOut,
-  Home
+  Home,
+  CreditCard
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -29,6 +30,7 @@ const menuItems = [
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Cleaners", url: "/admin/cleaners", icon: Briefcase },
   { title: "Bookings", url: "/admin/bookings", icon: CalendarCheck },
+  { title: "Payment Gateway", url: "/admin/payment-gateway", icon: CreditCard },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
