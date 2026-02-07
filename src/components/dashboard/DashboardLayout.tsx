@@ -8,7 +8,7 @@ import logo from "@/assets/logo.jpeg";
 import { Link } from "react-router-dom";
 
 const DashboardLayout = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, role, roleLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,7 +17,14 @@ const DashboardLayout = () => {
     }
   }, [user, loading, navigate]);
 
-  if (loading) {
+  // Redirect cleaners to their dashboard
+  useEffect(() => {
+    if (!roleLoading && role === "cleaner") {
+      navigate("/cleaner/dashboard", { replace: true });
+    }
+  }, [role, roleLoading, navigate]);
+
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -25,7 +32,7 @@ const DashboardLayout = () => {
     );
   }
 
-  if (!user) {
+  if (!user || role === "cleaner") {
     return null;
   }
 
