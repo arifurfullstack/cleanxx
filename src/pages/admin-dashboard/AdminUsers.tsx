@@ -56,6 +56,7 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<AppRole | "all">("all");
   const [updatingRoles, setUpdatingRoles] = useState<Set<string>>(new Set());
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -71,10 +72,10 @@ const AdminUsers = () => {
     fetchUsers();
   }, [currentPage, pageSize]);
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or role filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, roleFilter]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -195,11 +196,13 @@ const AdminUsers = () => {
   };
 
   // Filter users client-side for current page
-  const filteredUsers = users.filter(
-    (user) =>
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
       user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -260,7 +263,7 @@ const AdminUsers = () => {
               <CardTitle>All Users</CardTitle>
               <CardDescription>{totalCount} total users registered</CardDescription>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -270,6 +273,21 @@ const AdminUsers = () => {
                   className="pl-9"
                 />
               </div>
+              <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as AppRole | "all")}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  {AVAILABLE_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      <Badge variant={getRoleBadgeVariant(role)} className="capitalize">
+                        {role}
+                      </Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
                 <SelectTrigger className="w-20">
                   <SelectValue />
