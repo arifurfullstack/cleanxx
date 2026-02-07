@@ -107,8 +107,9 @@ const Auth = () => {
     } else {
       toast({
         title: "Account created!",
-        description: "Please check your email to verify your account.",
+        description: "Welcome! Redirecting to your dashboard...",
       });
+      // Redirect will happen via useEffect when user state updates
     }
   };
 
