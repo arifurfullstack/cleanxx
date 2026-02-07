@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Star, MapPin, Shield, Clock, Heart, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,10 @@ interface CleanerCardProps {
 const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
   if (variant === "list") {
     return (
-      <div className="group bg-card rounded-2xl border border-border overflow-hidden hover:shadow-card-hover transition-all duration-300 flex flex-col md:flex-row">
+      <Link 
+        to={`/cleaner/${cleaner.id}`}
+        className="group bg-card rounded-2xl border border-border overflow-hidden hover:shadow-card-hover transition-all duration-300 flex flex-col md:flex-row block"
+      >
         {/* Image */}
         <div className="relative w-full md:w-64 aspect-[4/3] md:aspect-auto shrink-0 overflow-hidden">
           <img
@@ -109,21 +113,24 @@ const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
               <span className="font-semibold text-primary text-lg ml-2">${cleaner.priceFrom}</span>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={(e) => e.preventDefault()}>
                 Get Quote
               </Button>
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary" size="sm" onClick={(e) => e.preventDefault()}>
                 Book Now
               </Button>
             </div>
           </div>
         </div>
-      </div>
+      </Link>
     );
   }
 
   return (
-    <div className="group bg-card rounded-2xl border border-border overflow-hidden hover:shadow-card-hover transition-all duration-300">
+    <Link 
+      to={`/cleaner/${cleaner.id}`}
+      className="group bg-card rounded-2xl border border-border overflow-hidden hover:shadow-card-hover transition-all duration-300 block"
+    >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
@@ -200,16 +207,16 @@ const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
             <span className="font-semibold text-primary ml-1">${cleaner.priceFrom}</span>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={(e) => e.preventDefault()}>
               Quote
             </Button>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" onClick={(e) => e.preventDefault()}>
               Book
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
