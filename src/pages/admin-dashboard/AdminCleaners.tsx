@@ -46,7 +46,8 @@ import {
   Pencil,
   Trash2,
   Zap,
-  Plus
+  Plus,
+  Download
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -95,6 +96,7 @@ const AdminCleaners = () => {
 
   // Loading states for inline actions
   const [updatingCleaners, setUpdatingCleaners] = useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchCleaners();
@@ -244,6 +246,78 @@ const AdminCleaners = () => {
     setTotalCount((prev) => prev + 1);
   };
 
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      // Fetch all cleaners for export (not just current page)
+      const { data: allCleaners, error } = await supabase
+        .from("cleaner_profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (!allCleaners || allCleaners.length === 0) {
+        toast.error("No cleaner data to export");
+        return;
+      }
+
+      // Define CSV headers
+      const headers = [
+        "ID",
+        "Business Name",
+        "Hourly Rate",
+        "Years Experience",
+        "Services",
+        "Service Areas",
+        "Verified",
+        "Active",
+        "Instant Booking",
+        "Response Time",
+        "Created At",
+      ];
+
+      // Convert data to CSV rows
+      const rows = allCleaners.map((cleaner) => [
+        cleaner.id,
+        `"${(cleaner.business_name || "").replace(/"/g, '""')}"`,
+        cleaner.hourly_rate,
+        cleaner.years_experience || "",
+        `"${(cleaner.services || []).join(", ").replace(/"/g, '""')}"`,
+        `"${(cleaner.service_areas || []).join(", ").replace(/"/g, '""')}"`,
+        cleaner.is_verified ? "Yes" : "No",
+        cleaner.is_active ? "Yes" : "No",
+        cleaner.instant_booking ? "Yes" : "No",
+        cleaner.response_time || "",
+        format(new Date(cleaner.created_at), "yyyy-MM-dd HH:mm:ss"),
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) => row.join(",")),
+      ].join("\n");
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cleaners-export-${format(new Date(), "yyyy-MM-dd")}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${allCleaners.length} cleaners to CSV`);
+    } catch (error) {
+      console.error("Error exporting cleaners:", error);
+      toast.error("Failed to export cleaner data");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handlePageSizeChange = (newSize: string) => {
     setPageSize(Number(newSize));
     setCurrentPage(1);
@@ -288,10 +362,20 @@ const AdminCleaners = () => {
           <h2 className="font-heading text-2xl font-bold text-foreground">Cleaner Management</h2>
           <p className="text-muted-foreground">View and manage service providers on the platform.</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Cleaner
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCSV} disabled={isExporting || totalCount === 0}>
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Export CSV
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Cleaner
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
