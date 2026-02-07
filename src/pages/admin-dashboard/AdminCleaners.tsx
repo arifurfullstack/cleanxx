@@ -11,88 +11,267 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Briefcase, Star, CheckCircle, XCircle, Loader2, MapPin, DollarSign } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  Search, 
+  Briefcase, 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  MapPin, 
+  DollarSign,
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  Trash2,
+  Zap
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { EditCleanerDialog } from "@/components/admin-dashboard/EditCleanerDialog";
+import { DeleteCleanerDialog } from "@/components/admin-dashboard/DeleteCleanerDialog";
+import { ViewCleanerDialog } from "@/components/admin-dashboard/ViewCleanerDialog";
 
 interface CleanerProfile {
   id: string;
   user_id: string;
   business_name: string;
   hourly_rate: number;
+  bio: string | null;
+  years_experience: number | null;
   is_verified: boolean;
   is_active: boolean;
+  instant_booking: boolean;
   services: string[];
   service_areas: string[];
   created_at: string;
+  response_time: string | null;
 }
+
+type StatusFilter = "all" | "verified" | "unverified" | "active" | "inactive";
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 const AdminCleaners = () => {
   const [cleaners, setCleaners] = useState<CleanerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Dialog states
+  const [selectedCleaner, setSelectedCleaner] = useState<CleanerProfile | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Loading states for inline actions
+  const [updatingCleaners, setUpdatingCleaners] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const fetchCleaners = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("cleaner_profiles")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        setCleaners(data || []);
-      } catch (error) {
-        console.error("Error fetching cleaners:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCleaners();
-  }, []);
+  }, [currentPage, pageSize]);
 
-  const filteredCleaners = cleaners.filter((cleaner) =>
-    cleaner.business_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
-  const handleToggleVerification = async (cleanerId: string, currentStatus: boolean) => {
+  const fetchCleaners = async () => {
+    setLoading(true);
+    try {
+      // Get total count
+      const { count, error: countError } = await supabase
+        .from("cleaner_profiles")
+        .select("*", { count: "exact", head: true });
+
+      if (countError) throw countError;
+      setTotalCount(count || 0);
+
+      // Fetch paginated data
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error } = await supabase
+        .from("cleaner_profiles")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+      setCleaners(data || []);
+    } catch (error) {
+      console.error("Error fetching cleaners:", error);
+      toast.error("Failed to fetch cleaners");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredCleaners = cleaners.filter((cleaner) => {
+    const matchesSearch = cleaner.business_name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    let matchesStatus = true;
+    switch (statusFilter) {
+      case "verified":
+        matchesStatus = cleaner.is_verified;
+        break;
+      case "unverified":
+        matchesStatus = !cleaner.is_verified;
+        break;
+      case "active":
+        matchesStatus = cleaner.is_active;
+        break;
+      case "inactive":
+        matchesStatus = !cleaner.is_active;
+        break;
+    }
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleToggleVerification = async (cleaner: CleanerProfile) => {
+    setUpdatingCleaners((prev) => new Set(prev).add(cleaner.id));
     try {
       const { error } = await supabase
         .from("cleaner_profiles")
-        .update({ is_verified: !currentStatus })
-        .eq("id", cleanerId);
+        .update({ is_verified: !cleaner.is_verified })
+        .eq("id", cleaner.id);
 
       if (error) throw error;
 
       setCleaners((prev) =>
         prev.map((c) =>
-          c.id === cleanerId ? { ...c, is_verified: !currentStatus } : c
+          c.id === cleaner.id ? { ...c, is_verified: !cleaner.is_verified } : c
         )
       );
+      toast.success(`Cleaner ${!cleaner.is_verified ? "verified" : "unverified"} successfully`);
     } catch (error) {
       console.error("Error updating cleaner:", error);
+      toast.error("Failed to update cleaner status");
+    } finally {
+      setUpdatingCleaners((prev) => {
+        const next = new Set(prev);
+        next.delete(cleaner.id);
+        return next;
+      });
     }
   };
 
-  const handleToggleActive = async (cleanerId: string, currentStatus: boolean) => {
+  const handleToggleActive = async (cleaner: CleanerProfile) => {
+    setUpdatingCleaners((prev) => new Set(prev).add(cleaner.id));
     try {
       const { error } = await supabase
         .from("cleaner_profiles")
-        .update({ is_active: !currentStatus })
-        .eq("id", cleanerId);
+        .update({ is_active: !cleaner.is_active })
+        .eq("id", cleaner.id);
 
       if (error) throw error;
 
       setCleaners((prev) =>
         prev.map((c) =>
-          c.id === cleanerId ? { ...c, is_active: !currentStatus } : c
+          c.id === cleaner.id ? { ...c, is_active: !cleaner.is_active } : c
         )
       );
+      toast.success(`Cleaner ${!cleaner.is_active ? "activated" : "deactivated"} successfully`);
     } catch (error) {
       console.error("Error updating cleaner:", error);
+      toast.error("Failed to update cleaner status");
+    } finally {
+      setUpdatingCleaners((prev) => {
+        const next = new Set(prev);
+        next.delete(cleaner.id);
+        return next;
+      });
     }
   };
+
+  const handleViewCleaner = (cleaner: CleanerProfile) => {
+    setSelectedCleaner(cleaner);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditCleaner = (cleaner: CleanerProfile) => {
+    setSelectedCleaner(cleaner);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteCleaner = (cleaner: CleanerProfile) => {
+    setSelectedCleaner(cleaner);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleCleanerUpdated = (updatedCleaner: CleanerProfile) => {
+    setCleaners((prev) =>
+      prev.map((c) => (c.id === updatedCleaner.id ? updatedCleaner : c))
+    );
+  };
+
+  const handleCleanerDeleted = (cleanerId: string) => {
+    setCleaners((prev) => prev.filter((c) => c.id !== cleanerId));
+    setTotalCount((prev) => prev - 1);
+  };
+
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(Number(newSize));
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  const verifiedCount = cleaners.filter((c) => c.is_verified).length;
+  const activeCount = cleaners.filter((c) => c.is_active).length;
 
   return (
     <div className="space-y-6">
@@ -101,23 +280,86 @@ const AdminCleaners = () => {
         <p className="text-muted-foreground">View and manage service providers on the platform.</p>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Cleaners</p>
+                <p className="text-2xl font-bold">{totalCount}</p>
+              </div>
+              <Briefcase className="h-8 w-8 text-primary/20" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Verified</p>
+                <p className="text-2xl font-bold">{verifiedCount}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-primary/20" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Active</p>
+                <p className="text-2xl font-bold">{activeCount}</p>
+              </div>
+              <Zap className="h-8 w-8 text-primary/20" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle>All Cleaners</CardTitle>
               <CardDescription>
-                {cleaners.length} cleaners registered • {cleaners.filter((c) => c.is_verified).length} verified
+                Manage cleaner profiles, verification, and status
               </CardDescription>
             </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search cleaners..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search cleaners..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="All status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All status</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="unverified">Unverified</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -132,94 +374,192 @@ const AdminCleaners = () => {
               <p className="text-muted-foreground">No cleaners found.</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Business</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Services</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCleaners.map((cleaner) => (
-                    <TableRow key={cleaner.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Briefcase className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{cleaner.business_name}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {cleaner.service_areas.slice(0, 2).join(", ") || "No areas set"}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">${cleaner.hourly_rate}/hr</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {cleaner.services.slice(0, 2).map((service) => (
-                            <Badge key={service} variant="outline" className="text-xs">
-                              {service}
-                            </Badge>
-                          ))}
-                          {cleaner.services.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{cleaner.services.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={cleaner.is_verified ? "default" : "secondary"}>
-                            {cleaner.is_verified ? (
-                              <><CheckCircle className="h-3 w-3 mr-1" /> Verified</>
-                            ) : (
-                              "Unverified"
-                            )}
-                          </Badge>
-                          <Badge variant={cleaner.is_active ? "outline" : "destructive"}>
-                            {cleaner.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant={cleaner.is_verified ? "outline" : "default"}
-                            onClick={() => handleToggleVerification(cleaner.id, cleaner.is_verified)}
-                          >
-                            {cleaner.is_verified ? "Unverify" : "Verify"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={cleaner.is_active ? "destructive" : "outline"}
-                            onClick={() => handleToggleActive(cleaner.id, cleaner.is_active)}
-                          >
-                            {cleaner.is_active ? "Deactivate" : "Activate"}
-                          </Button>
-                        </div>
-                      </TableCell>
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Business</TableHead>
+                      <TableHead>Rate</TableHead>
+                      <TableHead>Services</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCleaners.map((cleaner) => (
+                      <TableRow key={cleaner.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Briefcase className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{cleaner.business_name}</p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {cleaner.service_areas.slice(0, 2).join(", ") || "No areas"}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">${cleaner.hourly_rate}/hr</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {cleaner.services.slice(0, 2).map((service) => (
+                              <Badge key={service} variant="outline" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
+                            {cleaner.services.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{cleaner.services.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={cleaner.is_verified ? "default" : "secondary"} className="w-fit">
+                              {cleaner.is_verified ? (
+                                <><CheckCircle className="h-3 w-3 mr-1" /> Verified</>
+                              ) : (
+                                <><XCircle className="h-3 w-3 mr-1" /> Unverified</>
+                              )}
+                            </Badge>
+                            <Badge variant={cleaner.is_active ? "outline" : "destructive"} className="w-fit">
+                              {cleaner.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {format(new Date(cleaner.created_at), "MMM d, yyyy")}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" disabled={updatingCleaners.has(cleaner.id)}>
+                                {updatingCleaners.has(cleaner.id) ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MoreHorizontal className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewCleaner(cleaner)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditCleaner(cleaner)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleToggleVerification(cleaner)}>
+                                {cleaner.is_verified ? (
+                                  <><XCircle className="h-4 w-4 mr-2" /> Unverify</>
+                                ) : (
+                                  <><CheckCircle className="h-4 w-4 mr-2" /> Verify</>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleToggleActive(cleaner)}>
+                                {cleaner.is_active ? (
+                                  <><XCircle className="h-4 w-4 mr-2" /> Deactivate</>
+                                ) : (
+                                  <><CheckCircle className="h-4 w-4 mr-2" /> Activate</>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteCleaner(cleaner)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Profile
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                    {Math.min(currentPage * pageSize, totalCount)} of {totalCount} cleaners
+                  </p>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      {getPageNumbers().map((page, index) =>
+                        page === "ellipsis" ? (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <span className="px-3 py-2">...</span>
+                          </PaginationItem>
+                        ) : (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <ViewCleanerDialog
+        cleaner={selectedCleaner}
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+      />
+      <EditCleanerDialog
+        cleaner={selectedCleaner}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onCleanerUpdated={handleCleanerUpdated}
+      />
+      <DeleteCleanerDialog
+        cleaner={selectedCleaner}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onCleanerDeleted={handleCleanerDeleted}
+      />
     </div>
   );
 };
