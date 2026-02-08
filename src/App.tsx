@@ -16,6 +16,7 @@ import BookingHistory from "./pages/dashboard/BookingHistory";
 import Addresses from "./pages/dashboard/Addresses";
 import Profile from "./pages/dashboard/Profile";
 import Settings from "./pages/dashboard/Settings";
+import Subscription from "./pages/dashboard/Subscription";
 import CleanerDashboardLayout from "./components/cleaner-dashboard/CleanerDashboardLayout";
 import CleanerDashboardOverview from "./pages/cleaner-dashboard/CleanerDashboardOverview";
 import CleanerBookingRequests from "./pages/cleaner-dashboard/CleanerBookingRequests";
@@ -23,6 +24,7 @@ import CleanerSchedule from "./pages/cleaner-dashboard/CleanerSchedule";
 import CleanerProfile from "./pages/cleaner-dashboard/CleanerProfile";
 import CleanerEarnings from "./pages/cleaner-dashboard/CleanerEarnings";
 import CleanerSettings from "./pages/cleaner-dashboard/CleanerSettings";
+import CleanerSubscription from "./pages/cleaner-dashboard/CleanerSubscription";
 import AdminDashboardLayout from "./components/admin-dashboard/AdminDashboardLayout";
 import AdminDashboardOverview from "./pages/admin-dashboard/AdminDashboardOverview";
 import AdminUsers from "./pages/admin-dashboard/AdminUsers";
@@ -31,6 +33,8 @@ import AdminBookings from "./pages/admin-dashboard/AdminBookings";
 import AdminPaymentGateway from "./pages/admin-dashboard/AdminPaymentGateway";
 import AdminPaymentVerification from "./pages/admin-dashboard/AdminPaymentVerification";
 import AdminSettings from "./pages/admin-dashboard/AdminSettings";
+import AdminSubscriptionPlans from "./pages/admin-dashboard/AdminSubscriptionPlans";
+import AdminSubscriptionVerification from "./pages/admin-dashboard/AdminSubscriptionVerification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +59,7 @@ const App = () => (
               <Route path="upcoming" element={<UpcomingBookings />} />
               <Route path="history" element={<BookingHistory />} />
               <Route path="addresses" element={<Addresses />} />
+              <Route path="subscription" element={<Subscription />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
             </Route>
@@ -64,6 +69,7 @@ const App = () => (
               <Route path="dashboard" element={<CleanerDashboardOverview />} />
               <Route path="bookings" element={<CleanerBookingRequests />} />
               <Route path="schedule" element={<CleanerSchedule />} />
+              <Route path="subscription" element={<CleanerSubscription />} />
               <Route path="profile" element={<CleanerProfile />} />
               <Route path="earnings" element={<CleanerEarnings />} />
               <Route path="settings" element={<CleanerSettings />} />
@@ -75,6 +81,8 @@ const App = () => (
               <Route path="users" element={<AdminUsers />} />
               <Route path="cleaners" element={<AdminCleaners />} />
               <Route path="bookings" element={<AdminBookings />} />
+              <Route path="subscriptions" element={<AdminSubscriptionPlans />} />
+              <Route path="subscription-verification" element={<AdminSubscriptionVerification />} />
               <Route path="payment-gateway" element={<AdminPaymentGateway />} />
               <Route path="payment-verification" element={<AdminPaymentVerification />} />
               <Route path="settings" element={<AdminSettings />} />

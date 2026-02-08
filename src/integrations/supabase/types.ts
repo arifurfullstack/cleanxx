@@ -366,6 +366,138 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          billing_period_end: string
+          billing_period_start: string
+          created_at: string
+          id: string
+          payment_method: string
+          plan_id: string
+          rejection_reason: string | null
+          status: string
+          submitted_at: string
+          subscription_id: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          billing_period_end: string
+          billing_period_start: string
+          created_at?: string
+          id?: string
+          payment_method?: string
+          plan_id: string
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string
+          subscription_id: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_period_end?: string
+          billing_period_start?: string
+          created_at?: string
+          id?: string
+          payment_method?: string
+          plan_id?: string
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string
+          subscription_id?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          booking_discount_percent: number | null
+          commission_discount: number | null
+          created_at: string
+          description: string | null
+          express_booking: boolean | null
+          features: Json
+          id: string
+          includes_analytics_access: boolean | null
+          includes_verification_badge: boolean | null
+          is_active: boolean
+          monthly_price: number
+          name: string
+          premium_support: boolean | null
+          priority_booking: boolean | null
+          priority_listing_boost: number | null
+          target_audience: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          booking_discount_percent?: number | null
+          commission_discount?: number | null
+          created_at?: string
+          description?: string | null
+          express_booking?: boolean | null
+          features?: Json
+          id?: string
+          includes_analytics_access?: boolean | null
+          includes_verification_badge?: boolean | null
+          is_active?: boolean
+          monthly_price?: number
+          name: string
+          premium_support?: boolean | null
+          priority_booking?: boolean | null
+          priority_listing_boost?: number | null
+          target_audience: string
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          booking_discount_percent?: number | null
+          commission_discount?: number | null
+          created_at?: string
+          description?: string | null
+          express_booking?: boolean | null
+          features?: Json
+          id?: string
+          includes_analytics_access?: boolean | null
+          includes_verification_badge?: boolean | null
+          is_active?: boolean
+          monthly_price?: number
+          name?: string
+          premium_support?: boolean | null
+          priority_booking?: boolean | null
+          priority_listing_boost?: number | null
+          target_audience?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -386,6 +518,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          last_payment_amount: number | null
+          last_payment_date: string | null
+          next_billing_date: string | null
+          payment_method: string
+          plan_id: string
+          start_date: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          last_payment_amount?: number | null
+          last_payment_date?: string | null
+          next_billing_date?: string | null
+          payment_method?: string
+          plan_id: string
+          start_date?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          last_payment_amount?: number | null
+          last_payment_date?: string | null
+          next_billing_date?: string | null
+          payment_method?: string
+          plan_id?: string
+          start_date?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

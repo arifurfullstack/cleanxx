@@ -5,7 +5,8 @@ import {
   DollarSign, 
   Settings, 
   ClipboardList,
-  LogOut
+  LogOut,
+  Crown
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -27,6 +28,7 @@ const menuItems = [
   { title: "Overview", url: "/cleaner/dashboard", icon: LayoutDashboard },
   { title: "Booking Requests", url: "/cleaner/bookings", icon: ClipboardList },
   { title: "My Schedule", url: "/cleaner/schedule", icon: Calendar },
+  { title: "Membership", url: "/cleaner/subscription", icon: Crown },
   { title: "My Profile", url: "/cleaner/profile", icon: User },
   { title: "Earnings", url: "/cleaner/earnings", icon: DollarSign },
   { title: "Settings", url: "/cleaner/settings", icon: Settings },
