@@ -172,6 +172,86 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_records: {
+        Row: {
+          amount: number
+          booking_date: string
+          booking_id: string | null
+          booking_time: string
+          cleaner_email: string | null
+          cleaner_id: string | null
+          cleaner_name: string | null
+          created_at: string
+          customer_address: string | null
+          customer_email: string
+          customer_id: string
+          customer_name: string
+          id: string
+          payment_method: string
+          rejection_reason: string | null
+          service_type: string
+          status: Database["public"]["Enums"]["payment_status"]
+          submitted_at: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          booking_date: string
+          booking_id?: string | null
+          booking_time: string
+          cleaner_email?: string | null
+          cleaner_id?: string | null
+          cleaner_name?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_email: string
+          customer_id: string
+          customer_name: string
+          id?: string
+          payment_method?: string
+          rejection_reason?: string | null
+          service_type: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          submitted_at?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_date?: string
+          booking_id?: string | null
+          booking_time?: string
+          cleaner_email?: string | null
+          cleaner_id?: string | null
+          cleaner_name?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string
+          customer_id?: string
+          customer_name?: string
+          id?: string
+          payment_method?: string
+          rejection_reason?: string | null
+          service_type?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          submitted_at?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           advance_booking_days: number
@@ -332,6 +412,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+      payment_status: "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -467,6 +548,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      payment_status: ["pending", "verified", "rejected"],
     },
   },
 } as const

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
   CardContent,
@@ -52,8 +53,6 @@ import {
   XCircle,
   Clock,
   Eye,
-  AlertTriangle,
-  Banknote,
   FileText,
   RefreshCw,
   Download,
@@ -61,9 +60,10 @@ import {
   Calendar,
   User,
   DollarSign,
+  Loader2,
 } from "lucide-react";
 
-type PaymentStatus = "pending" | "under_review" | "verified" | "rejected";
+type PaymentStatus = "pending" | "verified" | "rejected";
 
 interface Payment {
   id: string;
@@ -91,117 +91,9 @@ interface Payment {
   rejectionReason?: string;
 }
 
-// Mock data for pending payments
-const mockPendingPayments: Payment[] = [
-  {
-    id: "PAY-001",
-    bookingId: "BK-2024-001",
-    customerName: "Sarah Johnson",
-    customerEmail: "sarah.j@email.com",
-    cleanerName: "SparklePro Cleaning",
-    cleanerEmail: "sparklepro@email.com",
-    amount: 180.00,
-    serviceFee: 18.00,
-    totalAmount: 198.00,
-    paymentMethod: "bank",
-    status: "pending",
-    submittedAt: new Date("2024-02-05T10:30:00"),
-    bookingDate: new Date("2024-02-10"),
-    bookingTime: "9:00 AM",
-    serviceType: "Deep Cleaning",
-    customerAddress: "123 Main St, Toronto, ON",
-    referenceNumber: "TRF-78234",
-    notes: "Payment sent from TD Bank",
-  },
-  {
-    id: "PAY-002",
-    bookingId: "BK-2024-002",
-    customerName: "Michael Chen",
-    customerEmail: "m.chen@email.com",
-    cleanerName: "CleanSweep Services",
-    cleanerEmail: "cleansweep@email.com",
-    amount: 240.00,
-    serviceFee: 24.00,
-    totalAmount: 264.00,
-    paymentMethod: "bank",
-    status: "pending",
-    submittedAt: new Date("2024-02-06T14:15:00"),
-    bookingDate: new Date("2024-02-12"),
-    bookingTime: "2:00 PM",
-    serviceType: "Standard Home Cleaning",
-    customerAddress: "456 Oak Ave, Vancouver, BC",
-    referenceNumber: "ETR-91847",
-    notes: "",
-  },
-  {
-    id: "PAY-003",
-    bookingId: "BK-2024-003",
-    customerName: "Emily Rodriguez",
-    customerEmail: "emily.r@email.com",
-    cleanerName: "Fresh & Clean Co",
-    cleanerEmail: "freshclean@email.com",
-    amount: 150.00,
-    serviceFee: 15.00,
-    totalAmount: 165.00,
-    paymentMethod: "bank",
-    status: "under_review",
-    submittedAt: new Date("2024-02-04T09:00:00"),
-    bookingDate: new Date("2024-02-08"),
-    bookingTime: "11:00 AM",
-    serviceType: "Move In/Out Cleaning",
-    customerAddress: "789 Pine Rd, Calgary, AB",
-    referenceNumber: "RBC-45621",
-    notes: "Amount mismatch - customer sent $160",
-  },
-  {
-    id: "PAY-004",
-    bookingId: "BK-2024-004",
-    customerName: "David Kim",
-    customerEmail: "d.kim@email.com",
-    cleanerName: "Pristine Home Care",
-    cleanerEmail: "pristine@email.com",
-    amount: 320.00,
-    serviceFee: 32.00,
-    totalAmount: 352.00,
-    paymentMethod: "bank",
-    status: "verified",
-    submittedAt: new Date("2024-02-03T11:45:00"),
-    bookingDate: new Date("2024-02-07"),
-    bookingTime: "10:00 AM",
-    serviceType: "Post-Construction",
-    customerAddress: "321 Elm St, Montreal, QC",
-    referenceNumber: "BMO-33291",
-    notes: "Verified by admin",
-    verifiedAt: new Date("2024-02-03T15:30:00"),
-    verifiedBy: "Admin User",
-  },
-  {
-    id: "PAY-005",
-    bookingId: "BK-2024-005",
-    customerName: "Lisa Thompson",
-    customerEmail: "lisa.t@email.com",
-    cleanerName: "EcoClean Solutions",
-    cleanerEmail: "ecoclean@email.com",
-    amount: 200.00,
-    serviceFee: 20.00,
-    totalAmount: 220.00,
-    paymentMethod: "bank",
-    status: "rejected",
-    submittedAt: new Date("2024-02-02T16:20:00"),
-    bookingDate: new Date("2024-02-06"),
-    bookingTime: "3:00 PM",
-    serviceType: "Office Cleaning",
-    customerAddress: "555 Business Blvd, Ottawa, ON",
-    referenceNumber: "",
-    notes: "No payment received after 48 hours",
-    rejectedAt: new Date("2024-02-04T16:20:00"),
-    rejectedBy: "Admin User",
-    rejectionReason: "Payment not found in bank records",
-  },
-];
-
 const AdminPaymentVerification = () => {
-  const [payments, setPayments] = useState<Payment[]>(mockPendingPayments);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -210,7 +102,61 @@ const AdminPaymentVerification = () => {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [verificationNote, setVerificationNote] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch payment records from database
+  const fetchPayments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("payment_records")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formattedPayments: Payment[] = (data || []).map((record) => ({
+        id: record.id,
+        bookingId: record.booking_id || "",
+        customerName: record.customer_name,
+        customerEmail: record.customer_email,
+        cleanerName: record.cleaner_name || "",
+        cleanerEmail: record.cleaner_email || "",
+        amount: Number(record.amount) * 0.9, // Base amount (without fee)
+        serviceFee: Number(record.amount) * 0.1, // 10% platform fee
+        totalAmount: Number(record.amount),
+        paymentMethod: record.payment_method,
+        status: record.status as PaymentStatus,
+        submittedAt: new Date(record.submitted_at),
+        bookingDate: new Date(record.booking_date),
+        bookingTime: record.booking_time,
+        serviceType: record.service_type,
+        customerAddress: record.customer_address || "",
+        referenceNumber: "", // Can be added to schema if needed
+        notes: "",
+        verifiedAt: record.verified_at ? new Date(record.verified_at) : undefined,
+        verifiedBy: record.verified_by || undefined,
+        rejectionReason: record.rejection_reason || undefined,
+      }));
+
+      setPayments(formattedPayments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load payment records.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
 
   // Filter payments
   const filteredPayments = payments.filter((payment) => {
@@ -227,11 +173,10 @@ const AdminPaymentVerification = () => {
 
   // Stats
   const pendingCount = payments.filter((p) => p.status === "pending").length;
-  const underReviewCount = payments.filter((p) => p.status === "under_review").length;
   const verifiedCount = payments.filter((p) => p.status === "verified").length;
   const rejectedCount = payments.filter((p) => p.status === "rejected").length;
   const pendingAmount = payments
-    .filter((p) => p.status === "pending" || p.status === "under_review")
+    .filter((p) => p.status === "pending")
     .reduce((sum, p) => sum + p.totalAmount, 0);
 
   const getStatusBadge = (status: PaymentStatus) => {
@@ -241,13 +186,6 @@ const AdminPaymentVerification = () => {
           <Badge variant="secondary" className="gap-1">
             <Clock className="h-3 w-3" />
             Pending
-          </Badge>
-        );
-      case "under_review":
-        return (
-          <Badge variant="outline" className="gap-1 border-accent text-accent-foreground">
-            <AlertTriangle className="h-3 w-3" />
-            Under Review
           </Badge>
         );
       case "verified":
@@ -338,102 +276,137 @@ const AdminPaymentVerification = () => {
   const handleVerify = async () => {
     if (!selectedPayment) return;
 
-    // Update local state
-    setPayments((prev) =>
-      prev.map((p) =>
-        p.id === selectedPayment.id
-          ? {
-              ...p,
-              status: "verified" as PaymentStatus,
-              verifiedAt: new Date(),
-              verifiedBy: "Admin User",
-              notes: verificationNote || p.notes,
-            }
-          : p
-      )
-    );
+    setIsProcessing(true);
+    try {
+      // Update database
+      const { error } = await supabase
+        .from("payment_records")
+        .update({
+          status: "verified",
+          verified_at: new Date().toISOString(),
+          verified_by: user?.id,
+        })
+        .eq("id", selectedPayment.id);
 
-    // Send email notifications to both customer and cleaner
-    const [customerEmailSent, cleanerEmailSent] = await Promise.all([
-      sendPaymentNotification(selectedPayment, "verified"),
-      sendCleanerNotification(selectedPayment),
-    ]);
+      if (error) throw error;
 
-    if (customerEmailSent && cleanerEmailSent) {
+      // Send email notifications to both customer and cleaner
+      const [customerEmailSent, cleanerEmailSent] = await Promise.all([
+        sendPaymentNotification(selectedPayment, "verified"),
+        sendCleanerNotification(selectedPayment),
+      ]);
+
+      // Refresh data
+      await fetchPayments();
+
+      if (customerEmailSent && cleanerEmailSent) {
+        toast({
+          title: "Payment Verified",
+          description: `Payment verified. Both customer and cleaner have been notified.`,
+        });
+      } else if (customerEmailSent || cleanerEmailSent) {
+        toast({
+          title: "Payment Verified",
+          description: `Payment verified. Some notifications failed to send.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Payment Verified",
+          description: `Payment verified. Email notifications failed.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error verifying payment:", error);
       toast({
-        title: "Payment Verified",
-        description: `Payment ${selectedPayment.id} verified. Both customer and cleaner have been notified.`,
-      });
-    } else if (customerEmailSent || cleanerEmailSent) {
-      toast({
-        title: "Payment Verified",
-        description: `Payment ${selectedPayment.id} verified. Some notifications failed to send.`,
         variant: "destructive",
+        title: "Error",
+        description: "Failed to verify payment. Please try again.",
       });
-    } else {
-      toast({
-        title: "Payment Verified",
-        description: `Payment ${selectedPayment.id} verified. Email notifications failed.`,
-        variant: "destructive",
-      });
+    } finally {
+      setIsProcessing(false);
+      setVerifyDialogOpen(false);
+      setSelectedPayment(null);
+      setVerificationNote("");
     }
-
-    setVerifyDialogOpen(false);
-    setSelectedPayment(null);
-    setVerificationNote("");
   };
 
   const handleReject = async () => {
     if (!selectedPayment || !rejectionReason) return;
 
-    // Update local state
-    setPayments((prev) =>
-      prev.map((p) =>
-        p.id === selectedPayment.id
-          ? {
-              ...p,
-              status: "rejected" as PaymentStatus,
-              rejectedAt: new Date(),
-              rejectedBy: "Admin User",
-              rejectionReason,
-            }
-          : p
-      )
-    );
+    setIsProcessing(true);
+    try {
+      // Update database
+      const { error } = await supabase
+        .from("payment_records")
+        .update({
+          status: "rejected",
+          rejection_reason: rejectionReason,
+          verified_at: new Date().toISOString(), // Using verified_at for rejection timestamp too
+          verified_by: user?.id,
+        })
+        .eq("id", selectedPayment.id);
 
-    // Send email notification
-    const emailSent = await sendPaymentNotification(selectedPayment, "rejected", rejectionReason);
+      if (error) throw error;
 
-    toast({
-      variant: "destructive",
-      title: "Payment Rejected",
-      description: emailSent
-        ? `Payment ${selectedPayment.id} rejected. Customer has been notified.`
-        : `Payment ${selectedPayment.id} rejected. Email notification failed.`,
-    });
+      // Send email notification
+      const emailSent = await sendPaymentNotification(selectedPayment, "rejected", rejectionReason);
 
-    setRejectDialogOpen(false);
-    setSelectedPayment(null);
-    setRejectionReason("");
-  };
+      // Refresh data
+      await fetchPayments();
 
-  const handleMarkUnderReview = (payment: Payment) => {
-    setPayments((prev) =>
-      prev.map((p) =>
-        p.id === payment.id ? { ...p, status: "under_review" as PaymentStatus } : p
-      )
-    );
-
-    toast({
-      title: "Status Updated",
-      description: `Payment ${payment.id} marked as under review.`,
-    });
+      toast({
+        variant: "destructive",
+        title: "Payment Rejected",
+        description: emailSent
+          ? `Payment rejected. Customer has been notified.`
+          : `Payment rejected. Email notification failed.`,
+      });
+    } catch (error) {
+      console.error("Error rejecting payment:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to reject payment. Please try again.",
+      });
+    } finally {
+      setIsProcessing(false);
+      setRejectDialogOpen(false);
+      setSelectedPayment(null);
+      setRejectionReason("");
+    }
   };
 
   const exportPayments = () => {
+    // Create CSV content
+    const headers = ["ID", "Customer", "Cleaner", "Amount", "Status", "Submitted", "Booking Date"];
+    const csvContent = [
+      headers.join(","),
+      ...payments.map((p) =>
+        [
+          p.id,
+          p.customerName,
+          p.cleanerName,
+          p.totalAmount.toFixed(2),
+          p.status,
+          format(p.submittedAt, "yyyy-MM-dd"),
+          format(p.bookingDate, "yyyy-MM-dd"),
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payment-records-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
     toast({
-      title: "Export Started",
-      description: "Preparing CSV export of payment records...",
+      title: "Export Complete",
+      description: "Payment records exported to CSV.",
     });
   };
 
@@ -448,19 +421,19 @@ const AdminPaymentVerification = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportPayments}>
+          <Button variant="outline" onClick={exportPayments} disabled={payments.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button variant="outline" onClick={fetchPayments} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -470,19 +443,6 @@ const AdminPaymentVerification = () => {
               <div>
                 <p className="text-2xl font-bold">{pendingCount}</p>
                 <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 rounded-full bg-accent/10">
-                <AlertTriangle className="h-5 w-5 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{underReviewCount}</p>
-                <p className="text-xs text-muted-foreground">Under Review</p>
               </div>
             </div>
           </CardContent>
@@ -549,7 +509,6 @@ const AdminPaymentVerification = () => {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
                 <SelectItem value="verified">Verified</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
@@ -584,7 +543,14 @@ const AdminPaymentVerification = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <Loader2 className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-2" />
+                    <p className="text-muted-foreground">Loading payments...</p>
+                  </TableCell>
+                </TableRow>
+              ) : filteredPayments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
                     <Landmark className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
@@ -646,7 +612,7 @@ const AdminPaymentVerification = () => {
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                          {(payment.status === "pending" || payment.status === "under_review") && (
+                          {payment.status === "pending" && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -659,14 +625,6 @@ const AdminPaymentVerification = () => {
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Verify Payment
                               </DropdownMenuItem>
-                              {payment.status === "pending" && (
-                                <DropdownMenuItem
-                                  onClick={() => handleMarkUnderReview(payment)}
-                                >
-                                  <AlertTriangle className="mr-2 h-4 w-4" />
-                                  Mark Under Review
-                                </DropdownMenuItem>
-                              )}
                               <DropdownMenuItem
                                 onClick={() => {
                                   setSelectedPayment(payment);
@@ -810,9 +768,7 @@ const AdminPaymentVerification = () => {
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
               Close
             </Button>
-            {selectedPayment &&
-              (selectedPayment.status === "pending" ||
-                selectedPayment.status === "under_review") && (
+            {selectedPayment && selectedPayment.status === "pending" && (
                 <>
                   <Button
                     variant="destructive"
@@ -893,11 +849,15 @@ const AdminPaymentVerification = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)} disabled={isProcessing}>
               Cancel
             </Button>
-            <Button onClick={handleVerify}>
-              <CheckCircle className="mr-2 h-4 w-4" />
+            <Button onClick={handleVerify} disabled={isProcessing}>
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
               Confirm Verification
             </Button>
           </DialogFooter>
