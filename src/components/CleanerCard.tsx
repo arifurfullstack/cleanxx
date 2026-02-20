@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Star, MapPin, Shield, Clock, Heart, CheckCircle } from "lucide-react";
+import { Star, MapPin, Shield, Clock, Heart, CheckCircle, Crown, Zap, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export interface Cleaner {
@@ -18,12 +19,73 @@ export interface Cleaner {
   instantBooking: boolean;
   responseTime: string;
   description: string;
+  subscriptionTier?: "basic" | "pro" | "premium";
 }
+
+type SubscriptionTierConfig = {
+  label: string;
+  icon: React.ElementType;
+  badgeClass: string;
+  benefits: string[];
+};
+
+const SUBSCRIPTION_TIER_CONFIG: Record<string, SubscriptionTierConfig> = {
+  basic: {
+    label: "Member",
+    icon: Shield,
+    badgeClass: "bg-muted text-muted-foreground border-border",
+    benefits: ["Verified listing", "Priority support"],
+  },
+  pro: {
+    label: "Pro",
+    icon: Zap,
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
+    benefits: ["Priority listing", "Verification badge", "Reduced commission", "Analytics access"],
+  },
+  premium: {
+    label: "Premium",
+    icon: Crown,
+    badgeClass: "bg-accent/15 text-accent-foreground border-accent/30",
+    benefits: ["Top listing boost", "Verification badge", "Max commission discount", "Full analytics"],
+  },
+};
 
 interface CleanerCardProps {
   cleaner: Cleaner;
   variant?: "grid" | "list";
 }
+
+const SubscriptionTierBadge = ({ tier }: { tier: string }) => {
+  const config = SUBSCRIPTION_TIER_CONFIG[tier];
+  if (!config) return null;
+  const Icon = config.icon;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border cursor-default",
+            config.badgeClass
+          )}>
+            <Icon className="h-3 w-3" />
+            {config.label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <p className="font-semibold mb-1 capitalize">{tier} Member Benefits:</p>
+          <ul className="space-y-0.5">
+            {config.benefits.map(b => (
+              <li key={b} className="flex items-center gap-1 text-xs">
+                <CheckCircle className="h-3 w-3 text-secondary shrink-0" />
+                {b}
+              </li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
   if (variant === "list") {
@@ -53,7 +115,7 @@ const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
         <div className="flex-1 p-5 flex flex-col">
           <div className="flex items-start justify-between mb-2">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-heading font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
                   {cleaner.name}
                 </h3>
@@ -61,6 +123,9 @@ const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
                   <div className="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center" title="Verified">
                     <Shield className="h-3 w-3 text-secondary" />
                   </div>
+                )}
+                {cleaner.subscriptionTier && (
+                  <SubscriptionTierBadge tier={cleaner.subscriptionTier} />
                 )}
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -172,6 +237,13 @@ const CleanerCard = ({ cleaner, variant = "grid" }: CleanerCardProps) => {
             </div>
           )}
         </div>
+
+        {/* Subscription tier badge */}
+        {cleaner.subscriptionTier && (
+          <div className="mb-2">
+            <SubscriptionTierBadge tier={cleaner.subscriptionTier} />
+          </div>
+        )}
 
         {/* Rating */}
         <div className="flex items-center gap-2 mb-3">
