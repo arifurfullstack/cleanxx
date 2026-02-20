@@ -17,6 +17,10 @@ import {
   Award,
   Leaf,
   Info,
+  Crown,
+  Zap,
+  BarChart2,
+  Percent,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -52,6 +56,41 @@ import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { PaymentMethod } from "@/hooks/usePaymentSettings";
 import PaymentMethodSelector from "@/components/booking/PaymentMethodSelector";
 
+// Subscription tier display config for CleanerProfile
+const PROFILE_TIER_CONFIG = {
+  premium: {
+    label: "Premium Member",
+    Icon: Crown,
+    badgeClass: "bg-accent/15 text-accent-foreground border-accent/30",
+    benefits: [
+      { icon: Crown, text: "Top listing boost — appears first in search results" },
+      { icon: Shield, text: "Verification badge — platform-vetted professional" },
+      { icon: Percent, text: "Reduced commission — maximising your earnings" },
+      { icon: BarChart2, text: "Analytics access — full platform insights" },
+    ],
+  },
+  pro: {
+    label: "Pro Member",
+    Icon: Zap,
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
+    benefits: [
+      { icon: Zap, text: "Priority listing — higher visibility in search" },
+      { icon: Shield, text: "Verification badge — platform-vetted professional" },
+      { icon: Percent, text: "Reduced commission rate" },
+      { icon: BarChart2, text: "Analytics access" },
+    ],
+  },
+  basic: {
+    label: "Member",
+    Icon: Shield,
+    badgeClass: "bg-muted text-muted-foreground border-border",
+    benefits: [
+      { icon: Shield, text: "Verified listing" },
+      { icon: CheckCircle, text: "Priority support" },
+    ],
+  },
+} as const;
+
 // Mock cleaner data
 const mockCleanerData = {
   id: 1,
@@ -71,6 +110,7 @@ const mockCleanerData = {
   completedJobs: 342,
   repeatClients: "89%",
   hourlyRate: 45,
+  subscriptionTier: "premium" as "basic" | "pro" | "premium" | null,
   description: `SparklePro Cleaning is a professional cleaning service dedicated to making your home or office spotless. With over 5 years of experience, we pride ourselves on attention to detail, reliability, and eco-friendly practices.
 
 Our team of trained professionals uses only the highest quality, environmentally safe products to ensure a clean that's safe for your family, pets, and the planet.
@@ -315,6 +355,31 @@ const CleanerProfile = () => {
                         </Badge>
                       )}
                     </div>
+
+                    {/* Subscription Tier Banner */}
+                    {cleaner.subscriptionTier && PROFILE_TIER_CONFIG[cleaner.subscriptionTier] && (() => {
+                      const tierCfg = PROFILE_TIER_CONFIG[cleaner.subscriptionTier as keyof typeof PROFILE_TIER_CONFIG];
+                      const TierIcon = tierCfg.Icon;
+                      return (
+                        <div className={cn(
+                          "mt-4 rounded-xl border p-4",
+                          tierCfg.badgeClass
+                        )}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <TierIcon className="h-4 w-4" />
+                            <span className="font-semibold text-sm">{tierCfg.label}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {tierCfg.benefits.map((b) => (
+                              <div key={b.text} className="flex items-start gap-1.5 text-xs">
+                                <b.icon className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span>{b.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Quick Stats */}
                     <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-border">

@@ -32,6 +32,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: true,
     responseTime: "Responds in ~1 hour",
     description: "Professional home cleaning with eco-friendly products. Serving Toronto and GTA with same-day availability.",
+    subscriptionTier: "premium",
   },
   {
     id: 2,
@@ -47,6 +48,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: true,
     responseTime: "Responds in ~2 hours",
     description: "Specialized in commercial and office cleaning. Trusted by over 50 businesses in Vancouver.",
+    subscriptionTier: "pro",
   },
   {
     id: 3,
@@ -62,6 +64,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: false,
     responseTime: "Responds in ~30 min",
     description: "100% eco-friendly cleaning using only natural, non-toxic products. Perfect for families with kids and pets.",
+    subscriptionTier: "premium",
   },
   {
     id: 4,
@@ -77,6 +80,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: true,
     responseTime: "Responds in ~3 hours",
     description: "Affordable and reliable home cleaning services. Weekly, bi-weekly, and monthly plans available.",
+    subscriptionTier: "basic",
   },
   {
     id: 5,
@@ -92,6 +96,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: true,
     responseTime: "Responds in ~1 hour",
     description: "Comprehensive cleaning services including specialized window cleaning. Satisfaction guaranteed.",
+    subscriptionTier: "pro",
   },
   {
     id: 6,
@@ -107,6 +112,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: false,
     responseTime: "Responds in ~2 hours",
     description: "Specializing in move-in/move-out and post-construction cleaning. We handle the toughest jobs.",
+    subscriptionTier: "premium",
   },
   {
     id: 7,
@@ -122,6 +128,7 @@ const mockCleaners: Cleaner[] = [
     instantBooking: true,
     responseTime: "Responds in ~45 min",
     description: "Sustainable cleaning solutions for environmentally conscious homeowners. Carbon-neutral operations.",
+    subscriptionTier: "basic",
   },
   {
     id: 8,
