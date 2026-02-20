@@ -38,6 +38,7 @@ export const useActiveSponsoredListings = () => {
     queryKey: ["sponsored-listings", "active"],
     queryFn: async () => {
       const now = new Date().toISOString();
+      // Use a single combined or() to avoid duplicate query-param collision in PostgREST
       const { data, error } = await supabase
         .from("sponsored_listings")
         .select(`
@@ -50,13 +51,16 @@ export const useActiveSponsoredListings = () => {
         `)
         .eq("is_sponsored", true)
         .eq("sponsored_status", "active")
-        .or(`sponsored_end.is.null,sponsored_end.gte.${now}`)
         .or(`sponsored_start.is.null,sponsored_start.lte.${now}`)
         .order("sponsored_priority", { ascending: false })
         .limit(12);
 
       if (error) throw error;
-      return (data as SponsoredListing[]) ?? [];
+      // Filter expired end dates client-side (avoids double-or PostgREST issue)
+      const results = (data as SponsoredListing[]) ?? [];
+      return results.filter(
+        (l) => !l.sponsored_end || new Date(l.sponsored_end) >= new Date()
+      );
     },
   });
 };
