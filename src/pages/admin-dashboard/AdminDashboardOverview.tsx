@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Briefcase, CalendarCheck, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { Users, Briefcase, CalendarCheck, DollarSign, TrendingUp, Clock, Zap, Eye, MousePointerClick, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AreaChart,
@@ -21,6 +21,13 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { format, eachDayOfInterval, startOfDay, startOfMonth, subMonths, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { DateRangeFilter } from "@/components/admin-dashboard/DateRangeFilter";
+
+interface SponsoredStat {
+  name: string;
+  views: number;
+  quotes: number;
+  books: number;
+}
 
 interface DashboardStats {
   totalUsers: number;
@@ -88,6 +95,7 @@ const AdminDashboardOverview = () => {
   const [bookingStatuses, setBookingStatuses] = useState<BookingStatusData[]>([]);
   const [roleDistribution, setRoleDistribution] = useState<RoleDistribution[]>([]);
   const [revenueSummary, setRevenueSummary] = useState<RevenueSummary>({ thisMonth: 0, lastMonth: 0, total: 0, filtered: 0 });
+  const [sponsoredStats, setSponsoredStats] = useState<SponsoredStat[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -100,6 +108,7 @@ const AdminDashboardOverview = () => {
           fetchRevenueTrend(),
           fetchBookingStatuses(),
           fetchRoleDistribution(),
+          fetchSponsoredStats(),
         ]);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -258,34 +267,55 @@ const AdminDashboardOverview = () => {
     setRoleDistribution(roleData);
   };
 
+  const fetchSponsoredStats = async () => {
+    const { data } = await supabase
+      .from("sponsored_listings")
+      .select(`
+        sponsored_views_count,
+        sponsored_quote_clicks,
+        sponsored_book_clicks,
+        cleaner_profiles ( business_name )
+      `)
+      .order("sponsored_views_count", { ascending: false });
+
+    const stats: SponsoredStat[] = (data ?? []).map((row: any) => ({
+      name: row.cleaner_profiles?.business_name ?? "Unknown",
+      views: row.sponsored_views_count,
+      quotes: row.sponsored_quote_clicks,
+      books: row.sponsored_book_clicks,
+    }));
+    setSponsoredStats(stats);
+  };
+
+
   const statCards = [
     {
       title: "Total Users",
       value: stats.totalUsers,
       description: "Registered customers",
       icon: Users,
-      color: "text-blue-600 bg-blue-100",
+      color: "text-primary bg-primary/10",
     },
     {
       title: "Active Cleaners",
       value: stats.totalCleaners,
       description: "Service providers",
       icon: Briefcase,
-      color: "text-green-600 bg-green-100",
+      color: "text-secondary bg-secondary/10",
     },
     {
       title: "Total Bookings",
       value: stats.totalBookings,
       description: "All time bookings",
       icon: CalendarCheck,
-      color: "text-purple-600 bg-purple-100",
+      color: "text-primary bg-primary/10",
     },
     {
       title: "Pending Bookings",
       value: stats.pendingBookings,
       description: "Awaiting confirmation",
       icon: Clock,
-      color: "text-orange-600 bg-orange-100",
+      color: "text-destructive bg-destructive/10",
     },
   ];
 
@@ -545,6 +575,85 @@ const AdminDashboardOverview = () => {
         </Card>
       </div>
 
+      {/* Sponsored Spotlight Analytics */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-accent" />
+                Sponsored Spotlight Performance
+              </CardTitle>
+              <CardDescription>Cumulative views, quote requests &amp; bookings per sponsored listing</CardDescription>
+            </div>
+            {/* Totals strip */}
+            {sponsoredStats.length > 0 && (
+              <div className="flex gap-4 flex-wrap">
+                {[
+                  { icon: Eye, label: "Total Views", value: sponsoredStats.reduce((s, l) => s + l.views, 0) },
+                  { icon: BookOpen, label: "Total Quotes", value: sponsoredStats.reduce((s, l) => s + l.quotes, 0) },
+                  { icon: MousePointerClick, label: "Total Books", value: sponsoredStats.reduce((s, l) => s + l.books, 0) },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-center gap-1.5 text-sm">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{label}:</span>
+                    <span className="font-semibold text-foreground">{value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {sponsoredStats.length === 0 ? (
+            <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+              <Zap className="h-8 w-8 text-muted-foreground/30" />
+              <p>No sponsored listings yet. Activate sponsorships to see analytics.</p>
+            </div>
+          ) : (
+            <ChartContainer
+              config={{
+                views: { label: "Views", color: "hsl(var(--primary))" },
+                quotes: { label: "Quotes", color: "hsl(var(--secondary))" },
+                books: { label: "Bookings", color: "hsl(var(--accent))" },
+              }}
+              className="h-[280px] w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sponsoredStats} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-muted-foreground"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                    className="text-muted-foreground"
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend
+                    verticalAlign="top"
+                    height={32}
+                    formatter={(value) => (
+                      <span className="text-xs text-muted-foreground capitalize">{value}</span>
+                    )}
+                  />
+                  <Bar dataKey="views" name="Views" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="quotes" name="Quotes" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="books" name="Bookings" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Platform Health & Revenue */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -559,15 +668,15 @@ const AdminDashboardOverview = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Database Status</span>
-                <span className="text-sm font-medium text-green-600">Operational</span>
+                <span className="text-sm font-medium text-secondary">Operational</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Auth Service</span>
-                <span className="text-sm font-medium text-green-600">Operational</span>
+                <span className="text-sm font-medium text-secondary">Operational</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Storage</span>
-                <span className="text-sm font-medium text-green-600">Operational</span>
+                <span className="text-sm font-medium text-secondary">Operational</span>
               </div>
             </div>
           </CardContent>
