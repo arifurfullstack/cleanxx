@@ -1,0 +1,18 @@
+[build]
+pkgs = ["nodejs"]
+
+[build.env]
+BUN_INSTALL = "/root/.bun"
+PATH = "/root/.bun/bin:$PATH"
+
+[phases.setup]
+cmds = ["npm install -g bun"]
+
+[phases.install]
+cmds = ["bun install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["bun run build"]
+
+[start]
+cmd = "npm install -g serve && serve -s dist -l 3000"
