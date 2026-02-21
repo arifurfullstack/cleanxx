@@ -14,6 +14,9 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,6 +45,7 @@ const ServiceDetail = () => {
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Fetch user addresses
   const { data: addresses = [] } = useQuery({
@@ -138,24 +142,25 @@ const ServiceDetail = () => {
     }
   };
 
-  const handleInstantBuy = useCallback(async () => {
+  const handleOpenConfirmDialog = useCallback(() => {
     if (!user) {
       toast({ title: "Please sign in", description: "You need to be logged in to book a service.", variant: "destructive" });
       navigate("/auth");
       return;
     }
-    if (!listing || !selectedDate) return;
-
-    if (!selectedDate) {
+    if (!listing || !selectedDate) {
       toast({ title: "Select a date", description: "Please pick a date for your booking.", variant: "destructive" });
       return;
     }
-
-    // Prevent booking own service
     if (user.id === listing.cleaner_user_id) {
       toast({ title: "Cannot book", description: "You cannot book your own service.", variant: "destructive" });
       return;
     }
+    setShowConfirmDialog(true);
+  }, [user, listing, selectedDate, navigate]);
+
+  const handleConfirmBooking = useCallback(async () => {
+    if (!user || !listing || !selectedDate) return;
 
     setIsBuying(true);
     try {
@@ -177,11 +182,11 @@ const ServiceDetail = () => {
 
       if (error) throw error;
 
-      // Increment orders count
       await supabase.from("service_listings")
         .update({ orders_count: (listing.orders_count || 0) + 1 })
         .eq("id", listing.id);
 
+      setShowConfirmDialog(false);
       toast({ title: "Service Booked!", description: "Your booking has been placed. The cleaner will confirm shortly." });
       navigate("/dashboard/upcoming-bookings");
     } catch (err: any) {
@@ -189,7 +194,9 @@ const ServiceDetail = () => {
     } finally {
       setIsBuying(false);
     }
-  }, [user, listing, navigate]);
+  }, [user, listing, selectedDate, selectedTime, selectedAddressId, specialInstructions, navigate]);
+
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
   if (isLoading) {
     return (
@@ -465,7 +472,7 @@ const ServiceDetail = () => {
                   className="w-full mb-3"
                   size="lg"
                   disabled={isBuying}
-                  onClick={handleInstantBuy}
+                  onClick={handleOpenConfirmDialog}
                 >
                   {isBuying ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -556,6 +563,100 @@ const ServiceDetail = () => {
         )}
       </main>
       <Footer />
+
+      {/* Booking Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Your Booking</DialogTitle>
+            <DialogDescription>Please review your booking details before confirming.</DialogDescription>
+          </DialogHeader>
+
+          {listing && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3">
+                <img
+                  src={listing.image_url || logoDefault}
+                  alt={listing.title}
+                  className="h-14 w-14 rounded-lg object-cover"
+                />
+                <div>
+                  <p className="font-semibold text-sm">{listing.title}</p>
+                  <p className="text-xs text-muted-foreground">{listing.cleaner_name}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Date</p>
+                    <p className="font-medium">{selectedDate ? format(selectedDate, "PPP") : "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Time</p>
+                    <p className="font-medium">{format(new Date(`2000-01-01T${selectedTime}`), "h:mm a")}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Price</p>
+                    <p className="font-medium">{getPriceLabel(listing.price_type, listing.price)}</p>
+                  </div>
+                </div>
+                {listing.duration_hours && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">Duration</p>
+                      <p className="font-medium">{listing.duration_hours} hrs</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {selectedAddress && (
+                <>
+                  <Separator />
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">Address</p>
+                      <p className="font-medium">{selectedAddress.label} – {selectedAddress.street_address}, {selectedAddress.city}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {specialInstructions.trim() && (
+                <>
+                  <Separator />
+                  <div className="text-sm">
+                    <p className="text-muted-foreground text-xs mb-1">Special Instructions</p>
+                    <p className="text-foreground bg-muted/50 p-2 rounded-md text-xs">{specialInstructions}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} disabled={isBuying}>
+              Cancel
+            </Button>
+            <Button variant="cta" onClick={handleConfirmBooking} disabled={isBuying}>
+              {isBuying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+              {isBuying ? "Booking..." : "Confirm Booking"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
