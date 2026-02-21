@@ -174,6 +174,17 @@ const Jobs = () => {
         proposed_rate: applyRate ? parseFloat(applyRate) : null,
       });
       if (error) throw error;
+
+      // Send email notification to job poster (fire-and-forget)
+      const applicantName = user?.user_metadata?.full_name || user?.email || "A cleaner";
+      supabase.functions.invoke("send-job-application-notification", {
+        body: {
+          jobId,
+          applicantName,
+          coverMessage: applyMessage.trim() || null,
+          proposedRate: applyRate ? parseFloat(applyRate) : null,
+        },
+      }).catch((err) => console.error("Failed to send application notification:", err));
     },
     onSuccess: () => {
       toast({ title: "Application Sent!", description: "The job poster will be notified." });
