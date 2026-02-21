@@ -1,15 +1,8 @@
 [build]
 pkgs = ["nodejs"]
 
-[build.env]
-BUN_INSTALL = "/root/.bun"
-PATH = "/root/.bun/bin:$PATH"
-
-[phases.setup]
-cmds = ["npm install -g bun"]
-
 [phases.install]
-cmds = ["bun install --frozen-lockfile"]
+cmds = ["npm install -g bun", "bun install --frozen-lockfile"]
 
 [phases.build]
 cmds = ["bun run build"]
