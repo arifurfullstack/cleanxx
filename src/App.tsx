@@ -39,6 +39,7 @@ import AdminSubscriptionVerification from "./pages/admin-dashboard/AdminSubscrip
 import AdminSponsoredListings from "./pages/admin-dashboard/AdminSponsoredListings";
 import AdminCleanerOfTheWeek from "./pages/admin-dashboard/AdminCleanerOfTheWeek";
 import AdminThemeManagement from "./pages/admin-dashboard/AdminThemeManagement";
+import AdminServiceListings from "./pages/admin-dashboard/AdminServiceListings";
 import AdminJobs from "./pages/admin-dashboard/AdminJobs";
 import CleanerSponsorship from "./pages/cleaner-dashboard/CleanerSponsorship";
 import Reviews from "./pages/Reviews";
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="payment-verification" element={<AdminPaymentVerification />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="theme" element={<AdminThemeManagement />} />
+              <Route path="service-listings" element={<AdminServiceListings />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

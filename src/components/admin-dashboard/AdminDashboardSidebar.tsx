@@ -11,7 +11,8 @@ import {
   BadgeCheck,
   Crown,
   Zap,
-  Paintbrush
+  Paintbrush,
+  ShoppingBag
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -41,6 +42,7 @@ const menuItems = [
   { title: "Subscription Payments", url: "/admin/subscription-verification", icon: BadgeCheck },
   { title: "Payment Gateway", url: "/admin/payment-gateway", icon: CreditCard },
   { title: "Payment Verification", url: "/admin/payment-verification", icon: BadgeCheck },
+  { title: "Service Listings", url: "/admin/service-listings", icon: ShoppingBag },
   { title: "Settings", url: "/admin/settings", icon: Settings },
   { title: "Theme Management", url: "/admin/theme", icon: Paintbrush },
 ];
