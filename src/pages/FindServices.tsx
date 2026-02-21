@@ -201,6 +201,16 @@ const FindServices = () => {
         {/* Filters row */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {SERVICE_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={priceRange} onValueChange={setPriceRange}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Price Range" />
