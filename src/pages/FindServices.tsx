@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,12 +51,15 @@ interface ServiceListing {
   cleaner_is_verified?: boolean;
 }
 
+const ITEMS_PER_PAGE = 12;
+
 const FindServices = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [priceRange, setPriceRange] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["service-listings", category, sortBy],
@@ -125,20 +128,34 @@ const FindServices = () => {
     },
   });
 
-  const filteredListings = listings.filter((listing) => {
-    const matchesSearch = !searchQuery || 
-      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      listing.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      listing.location?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredListings = useMemo(() => {
+    return listings.filter((listing) => {
+      const matchesSearch = !searchQuery || 
+        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.location?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesPrice = priceRange === "all" ||
-      (priceRange === "under50" && listing.price < 50) ||
-      (priceRange === "50to100" && listing.price >= 50 && listing.price <= 100) ||
-      (priceRange === "100to200" && listing.price > 100 && listing.price <= 200) ||
-      (priceRange === "over200" && listing.price > 200);
+      const matchesPrice = priceRange === "all" ||
+        (priceRange === "under50" && listing.price < 50) ||
+        (priceRange === "50to100" && listing.price >= 50 && listing.price <= 100) ||
+        (priceRange === "100to200" && listing.price > 100 && listing.price <= 200) ||
+        (priceRange === "over200" && listing.price > 200);
 
-    return matchesSearch && matchesPrice;
-  });
+      return matchesSearch && matchesPrice;
+    });
+  }, [listings, searchQuery, priceRange]);
+
+  const totalPages = Math.ceil(filteredListings.length / ITEMS_PER_PAGE);
+  const paginatedListings = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredListings.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredListings, currentPage]);
+
+  // Reset to page 1 when filters change
+  const handleCategoryChange = (val: string) => { setCategory(val); setCurrentPage(1); };
+  const handleSearchChange = (val: string) => { setSearchQuery(val); setCurrentPage(1); };
+  const handlePriceChange = (val: string) => { setPriceRange(val); setCurrentPage(1); };
+  const handleSortChange = (val: string) => { setSortBy(val); setCurrentPage(1); };
 
   const getPriceLabel = (type: string, price: number) => {
     switch (type) {
@@ -173,7 +190,7 @@ const FindServices = () => {
                 <Input
                   placeholder="Search services, locations..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 h-11"
                 />
               </div>
@@ -190,7 +207,7 @@ const FindServices = () => {
               key={cat}
               variant={category === cat ? "default" : "outline"}
               size="sm"
-              onClick={() => setCategory(cat)}
+              onClick={() => handleCategoryChange(cat)}
               className="rounded-full"
             >
               {cat}
@@ -201,7 +218,7 @@ const FindServices = () => {
         {/* Filters row */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={category} onValueChange={setCategory}>
+          <Select value={category} onValueChange={handleCategoryChange}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -211,7 +228,7 @@ const FindServices = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={priceRange} onValueChange={setPriceRange}>
+          <Select value={priceRange} onValueChange={handlePriceChange}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Price Range" />
             </SelectTrigger>
@@ -223,7 +240,7 @@ const FindServices = () => {
               <SelectItem value="over200">$200+</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={sortBy} onValueChange={setSortBy}>
+          <Select value={sortBy} onValueChange={handleSortChange}>
             <SelectTrigger className="w-44">
               <SelectValue />
             </SelectTrigger>
@@ -253,7 +270,7 @@ const FindServices = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredListings.map((listing) => (
+            {paginatedListings.map((listing) => (
               <Card
                 key={listing.id}
                 className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-border/60 hover:border-primary/30"
@@ -343,6 +360,39 @@ const FindServices = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={page === currentPage ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className="w-9"
+              >
+                {page}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Next
+            </Button>
           </div>
         )}
       </main>
