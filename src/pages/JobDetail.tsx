@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import logoDefault from "@/assets/logo.jpeg";
 
 const URGENCY_OPTIONS: Record<string, { label: string; color: string }> = {
   urgent: { label: "Urgent", color: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -356,15 +357,13 @@ const JobDetail = () => {
                 <Separator className="my-4" />
 
                 {/* Job Image */}
-                {job.image_url && (
-                  <div className="mb-4">
-                    <img
-                      src={job.image_url}
-                      alt={job.title}
-                      className="w-full max-h-80 object-cover rounded-lg"
-                    />
-                  </div>
-                )}
+                <div className="mb-4">
+                  <img
+                    src={job.image_url || logoDefault}
+                    alt={job.title}
+                    className="w-full max-h-80 object-cover rounded-lg"
+                  />
+                </div>
 
                 {/* Description */}
                 <div>

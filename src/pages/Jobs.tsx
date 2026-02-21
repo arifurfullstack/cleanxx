@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import logoDefault from "@/assets/logo.jpeg";
 
 interface Job {
   id: string;
@@ -507,12 +508,14 @@ const Jobs = () => {
                       onClick={() => setExpandedJob(isExpanded ? null : job.id)}
                     >
                       <div className="flex items-start gap-4">
-                        {/* Avatar */}
-                        <Avatar className="h-11 w-11 shrink-0 ring-2 ring-primary/10">
-                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                            {(job.poster_name || "U").charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        {/* Job Thumbnail */}
+                        <div className="h-11 w-11 shrink-0 rounded-lg overflow-hidden ring-2 ring-primary/10">
+                          <img
+                            src={job.image_url || logoDefault}
+                            alt={job.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
@@ -567,13 +570,11 @@ const Jobs = () => {
                     {isExpanded && (
                       <div className="px-5 pb-5 pt-0 animate-fade-in">
                         <Separator className="mb-4" />
-                        {job.image_url && (
-                          <img
-                            src={job.image_url}
-                            alt={job.title}
-                            className="w-full h-48 object-cover rounded-lg mb-4"
-                          />
-                        )}
+                        <img
+                          src={job.image_url || logoDefault}
+                          alt={job.title}
+                          className="w-full h-48 object-cover rounded-lg mb-4"
+                        />
                         <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap mb-4">
                           {job.description}
                         </p>
