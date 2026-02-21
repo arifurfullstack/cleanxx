@@ -72,6 +72,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setLoading(false);
         
         if (session?.user) {
+          // Set roleLoading immediately to prevent premature redirects
+          setRoleLoading(true);
           // Defer role fetching to avoid Supabase auth deadlock
           setTimeout(() => fetchUserRole(session.user.id), 0);
         } else {
