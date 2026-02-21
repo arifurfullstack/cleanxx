@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
@@ -13,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, MapPin, Clock, DollarSign, Star, CheckCircle,
-  Eye, ShoppingBag, AlertCircle, MessageSquare, Share2, Link,
+  Eye, ShoppingBag, AlertCircle, MessageSquare, Share2, Link, Loader2, Zap,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -25,6 +26,8 @@ const ServiceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isBuying, setIsBuying] = useState(false);
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ["service-detail", id],
@@ -100,6 +103,52 @@ const ServiceDetail = () => {
       default: return `$${price}`;
     }
   };
+
+  const handleInstantBuy = useCallback(async () => {
+    if (!user) {
+      toast({ title: "Please sign in", description: "You need to be logged in to book a service.", variant: "destructive" });
+      navigate("/auth");
+      return;
+    }
+    if (!listing) return;
+
+    // Prevent booking own service
+    if (user.id === listing.cleaner_user_id) {
+      toast({ title: "Cannot book", description: "You cannot book your own service.", variant: "destructive" });
+      return;
+    }
+
+    setIsBuying(true);
+    try {
+      const scheduledDate = format(addDays(new Date(), 1), "yyyy-MM-dd");
+      const { data, error } = await supabase.from("bookings").insert({
+        customer_id: user.id,
+        cleaner_id: listing.cleaner_user_id,
+        cleaner_name: listing.cleaner_name,
+        service_type: listing.title,
+        service_price: listing.price,
+        duration_hours: listing.duration_hours || 2,
+        scheduled_date: scheduledDate,
+        scheduled_time: "09:00",
+        status: "pending",
+        special_instructions: `Instant booking for service: ${listing.title}`,
+      }).select().single();
+
+      if (error) throw error;
+
+      // Increment orders count
+      await supabase.from("service_listings")
+        .update({ orders_count: (listing.orders_count || 0) + 1 })
+        .eq("id", listing.id);
+
+      toast({ title: "Service Booked!", description: "Your booking has been placed. The cleaner will confirm shortly." });
+      navigate("/dashboard/upcoming-bookings");
+    } catch (err: any) {
+      toast({ title: "Booking failed", description: err.message || "Something went wrong.", variant: "destructive" });
+    } finally {
+      setIsBuying(false);
+    }
+  }, [user, listing, navigate]);
 
   if (isLoading) {
     return (
@@ -282,7 +331,22 @@ const ServiceDetail = () => {
                   </p>
                 </div>
 
-                <Button className="w-full mb-3" size="lg" onClick={() => navigate(`/cleaner/${listing.cleaner_profile_id}`)}>
+                <Button
+                  variant="cta"
+                  className="w-full mb-3"
+                  size="lg"
+                  disabled={isBuying}
+                  onClick={handleInstantBuy}
+                >
+                  {isBuying ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  {isBuying ? "Booking..." : "Instant Buy"}
+                </Button>
+
+                <Button variant="outline" className="w-full mb-3" size="lg" onClick={() => navigate(`/cleaner/${listing.cleaner_profile_id}`)}>
                   <MessageSquare className="h-4 w-4 mr-2" /> Contact & Book
                 </Button>
 
