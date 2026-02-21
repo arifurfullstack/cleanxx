@@ -1,8 +1,11 @@
-import { Star, MapPin, Clock, DollarSign, Eye, Settings } from "lucide-react";
+import { Star, MapPin, DollarSign, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
+import { trackSponsoredClick } from "@/hooks/useSponsoredListings";
 
 interface SponsoredCleaner {
+  id: string;
   name: string;
   image: string;
   rating: number;
@@ -10,9 +13,13 @@ interface SponsoredCleaner {
   location: string;
   startingPrice: number;
   services: string[];
+  isVerified: boolean;
 }
 
-const SponsoredSpotlightCard = ({ cleaner }: { cleaner: SponsoredCleaner }) => {
+const SponsoredSpotlightCard = ({ cleaner, listingId }: { cleaner: SponsoredCleaner; listingId: string }) => {
+  const handleQuoteClick = () => trackSponsoredClick(listingId, "quote");
+  const handleBookClick = () => trackSponsoredClick(listingId, "book");
+
   return (
     <div className="bg-card rounded-xl border border-border shadow-card p-4">
       <div className="flex gap-4">
@@ -27,14 +34,16 @@ const SponsoredSpotlightCard = ({ cleaner }: { cleaner: SponsoredCleaner }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h4 className="font-heading font-bold text-foreground text-base">{cleaner.name}</h4>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary">
-              ✓
-            </Badge>
+            {cleaner.isVerified && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary">
+                <Shield className="h-3 w-3" />
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 mb-1">
             <div className="flex items-center gap-0.5">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-3 w-3 fill-accent text-accent" />
+                <Star key={i} className={`h-3 w-3 ${i < Math.round(cleaner.rating) ? "fill-accent text-accent" : "text-muted"}`} />
               ))}
             </div>
             <span className="font-bold text-xs">{cleaner.rating}</span>
@@ -45,35 +54,21 @@ const SponsoredSpotlightCard = ({ cleaner }: { cleaner: SponsoredCleaner }) => {
           <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
             <MapPin className="h-3 w-3" />
             {cleaner.location}
-            <span className="ml-2 flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <Settings className="h-3 w-3" />
-              Most re in areas
-            </span>
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Starting ret ${cleaner.startingPrice}
-            </span>
-            <span className="flex items-center gap-1">
-              <DollarSign className="h-3 w-3" /> Convars at ${cleaner.startingPrice}
-            </span>
-            <span className="flex items-center gap-1">
-              <Settings className="h-3 w-3" /> Voot
-            </span>
+          <div className="flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+            {cleaner.services.slice(0, 3).map((s) => (
+              <span key={s} className="px-1.5 py-0.5 bg-muted rounded">{s}</span>
+            ))}
           </div>
         </div>
 
         {/* CTAs */}
         <div className="shrink-0 flex flex-col gap-2 justify-center">
-          <Button variant="outline" size="sm" className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground font-semibold text-xs px-4">
+          <Button variant="outline" size="sm" className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground font-semibold text-xs px-4" onClick={handleQuoteClick}>
             Request Quote
           </Button>
-          <Button variant="default" size="sm" className="font-semibold text-xs px-4">
-            Book Now
-          </Button>
-          <Button variant="secondary" size="sm" className="font-semibold text-xs px-4">
-            Refereset Quenôre
+          <Button variant="default" size="sm" className="font-semibold text-xs px-4" asChild onClick={handleBookClick}>
+            <Link to={`/cleaner/${cleaner.id}`}>Book Now</Link>
           </Button>
         </div>
       </div>
