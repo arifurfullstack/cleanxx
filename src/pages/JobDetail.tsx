@@ -355,6 +355,17 @@ const JobDetail = () => {
 
                 <Separator className="my-4" />
 
+                {/* Job Image */}
+                {job.image_url && (
+                  <div className="mb-4">
+                    <img
+                      src={job.image_url}
+                      alt={job.title}
+                      className="w-full max-h-80 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+
                 {/* Description */}
                 <div>
                   <h2 className="font-semibold text-foreground mb-2">Job Description</h2>
