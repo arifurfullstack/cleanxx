@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-cleaning.jpg";
+import heroBg from "@/assets/hero-bg.png";
+import heroCleaners from "@/assets/hero-cleaners.png";
 
 const categories = ["A+", "Airbnb", "Office", "Windeer", "Sunstruction", "Airbnb", "Construction", "Full Home", "Office"];
 
@@ -16,8 +17,13 @@ const HomepageHero = () => {
   };
 
   return (
-    <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(207 60% 92%) 0%, hsl(207 50% 88%) 40%, hsl(200 40% 92%) 100%)" }}>
-      <div className="container mx-auto px-4 py-12 lg:py-16">
+    <section className="relative overflow-hidden">
+      {/* Background image */}
+      <div className="absolute inset-0">
+        <img src={heroBg} alt="" className="w-full h-full object-cover" />
+      </div>
+
+      <div className="container mx-auto px-4 py-12 lg:py-16 relative">
         <div className="grid lg:grid-cols-2 gap-8 items-center">
           {/* Left Content */}
           <div>
@@ -55,7 +61,7 @@ const HomepageHero = () => {
                   className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
                     i === 0
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-foreground border-border hover:bg-muted"
+                      : "bg-card/80 backdrop-blur-sm text-foreground border-border hover:bg-muted"
                   }`}
                 >
                   {cat}
@@ -66,11 +72,11 @@ const HomepageHero = () => {
 
           {/* Right Hero Image */}
           <div className="hidden lg:block relative">
-            <div className="rounded-2xl overflow-hidden shadow-lg aspect-[4/3]">
+            <div className="rounded-2xl overflow-hidden">
               <img
-                src={heroImage}
+                src={heroCleaners}
                 alt="Professional cleaning team"
-                className="w-full h-full object-cover"
+                className="w-full h-auto object-cover"
               />
             </div>
           </div>
