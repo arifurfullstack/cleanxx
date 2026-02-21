@@ -38,12 +38,12 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-sm border-b border-border/50">
+    <header className="sticky top-0 z-50 w-full bg-primary border-b border-primary/20">
       <div className="container mx-auto px-4">
-        <div className="flex h-12 items-center justify-between lg:h-14">
+        <div className="flex h-14 items-center justify-between lg:h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
-            <img src={logo} alt="The Cleaning Network" className="h-8 w-auto lg:h-10" />
+            <img src={logo} alt="The Cleaning Network" className="h-10 w-auto lg:h-12" />
           </Link>
 
           {/* Center Navigation */}
@@ -52,9 +52,9 @@ const Header = () => {
               <Link
                 key={link.label}
                 to={link.href}
-                className="group inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-primary transition-colors"
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors"
               >
-                <link.icon className="h-3.5 w-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                <link.icon className="h-3.5 w-3.5 text-primary-foreground/60 group-hover:text-primary-foreground transition-colors" />
                 {link.label}
               </Link>
             ))}
@@ -69,20 +69,20 @@ const Header = () => {
                     {role === "admin" && (
                       <Link
                         to="/admin/dashboard"
-                        className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors"
+                        className="text-xs font-medium text-primary-foreground/90 hover:text-primary-foreground transition-colors"
                       >
                         Admin
                       </Link>
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 transition-colors outline-none">
+                        <button className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-primary-foreground/10 transition-colors outline-none">
                           <Avatar className="h-6 w-6">
-                            <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-semibold">
+                            <AvatarFallback className="bg-primary-foreground text-primary text-[10px] font-semibold">
                               {getInitials(user.email || "U")}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-[13px] font-medium text-foreground">{getUserName()}</span>
+                          <span className="text-[13px] font-medium text-primary-foreground">{getUserName()}</span>
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
@@ -118,14 +118,14 @@ const Header = () => {
                   <div className="flex items-center">
                     <Link
                       to="/auth"
-                      className="px-2.5 py-1 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      className="px-2.5 py-1 text-[13px] font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors"
                     >
                       Log in
                     </Link>
-                    <span className="text-border mx-0.5">·</span>
+                    <span className="text-primary-foreground/40 mx-0.5">·</span>
                     <Link
                       to="/auth"
-                      className="px-2.5 py-1 text-[13px] font-semibold text-primary hover:text-primary-dark transition-colors"
+                      className="px-2.5 py-1 text-[13px] font-semibold text-primary-foreground hover:text-primary-foreground/90 transition-colors"
                     >
                       Sign Up
                     </Link>
@@ -137,7 +137,7 @@ const Header = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="lg:hidden p-1.5 text-foreground rounded-md hover:bg-muted transition-colors"
+            className="lg:hidden p-1.5 text-primary-foreground rounded-md hover:bg-primary-foreground/10 transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
