@@ -7,7 +7,8 @@ import {
   ClipboardList,
   LogOut,
   Crown,
-  Zap
+  Zap,
+  ShoppingBag
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 const menuItems = [
   { title: "Overview", url: "/cleaner/dashboard", icon: LayoutDashboard },
+  { title: "My Services", url: "/cleaner/services", icon: ShoppingBag },
   { title: "Booking Requests", url: "/cleaner/bookings", icon: ClipboardList },
   { title: "My Schedule", url: "/cleaner/schedule", icon: Calendar },
   { title: "Membership", url: "/cleaner/subscription", icon: Crown },

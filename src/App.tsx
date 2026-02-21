@@ -44,6 +44,9 @@ import CleanerSponsorship from "./pages/cleaner-dashboard/CleanerSponsorship";
 import Reviews from "./pages/Reviews";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
+import FindServices from "./pages/FindServices";
+import ServiceDetail from "./pages/ServiceDetail";
+import CleanerServiceListings from "./pages/cleaner-dashboard/CleanerServiceListings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +67,8 @@ const App = () => (
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/services" element={<FindServices />} />
+            <Route path="/services/:id" element={<ServiceDetail />} />
             
             {/* Customer Dashboard Routes */}
             <Route path="/dashboard" element={<DashboardLayout />}>
@@ -87,6 +92,7 @@ const App = () => (
               <Route path="profile" element={<CleanerProfile />} />
               <Route path="earnings" element={<CleanerEarnings />} />
               <Route path="settings" element={<CleanerSettings />} />
+              <Route path="services" element={<CleanerServiceListings />} />
             </Route>
 
             {/* Admin Dashboard Routes */}

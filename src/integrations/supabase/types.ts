@@ -563,6 +563,86 @@ export type Database = {
           },
         ]
       }
+      service_listings: {
+        Row: {
+          category: string
+          cleaner_profile_id: string
+          created_at: string
+          delivery_time: string | null
+          description: string
+          duration_hours: number | null
+          features: string[] | null
+          gallery_images: string[] | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          location: string | null
+          max_orders: number | null
+          orders_count: number
+          price: number
+          price_type: string
+          service_area: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+          views_count: number
+        }
+        Insert: {
+          category?: string
+          cleaner_profile_id: string
+          created_at?: string
+          delivery_time?: string | null
+          description: string
+          duration_hours?: number | null
+          features?: string[] | null
+          gallery_images?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          location?: string | null
+          max_orders?: number | null
+          orders_count?: number
+          price?: number
+          price_type?: string
+          service_area?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+          views_count?: number
+        }
+        Update: {
+          category?: string
+          cleaner_profile_id?: string
+          created_at?: string
+          delivery_time?: string | null
+          description?: string
+          duration_hours?: number | null
+          features?: string[] | null
+          gallery_images?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          location?: string | null
+          max_orders?: number | null
+          orders_count?: number
+          price?: number
+          price_type?: string
+          service_area?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_listings_cleaner_profile_id_fkey"
+            columns: ["cleaner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsored_listings: {
         Row: {
           cleaner_profile_id: string

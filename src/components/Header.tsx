@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Search, Briefcase, CalendarDays, Star, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
+import { Menu, X, Search, Briefcase, CalendarDays, Star, User, LogOut, LayoutDashboard, Shield, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ const Header = () => {
 
   const navLinks = [
     { label: "Find Cleaners", href: "/search", icon: Search },
+    { label: "Services", href: "/services", icon: ShoppingBag },
     { label: "Post a Job", href: "/jobs", icon: Briefcase },
     { label: "My Bookings", href: "/dashboard/upcoming", icon: CalendarDays },
     { label: "Reviews", href: "/reviews", icon: Star },
