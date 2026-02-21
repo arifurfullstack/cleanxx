@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addDays } from "date-fns";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
@@ -12,9 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, MapPin, Clock, DollarSign, Star, CheckCircle,
-  Eye, ShoppingBag, AlertCircle, MessageSquare, Share2, Link, Loader2, Zap,
+  Eye, ShoppingBag, AlertCircle, MessageSquare, Share2, Link, Loader2, Zap, CalendarIcon,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -22,12 +26,19 @@ import {
 import { toast } from "@/hooks/use-toast";
 import logoDefault from "@/assets/logo.jpeg";
 
+const TIME_SLOTS = [
+  "08:00", "09:00", "10:00", "11:00", "12:00",
+  "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
+];
+
 const ServiceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isBuying, setIsBuying] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1));
+  const [selectedTime, setSelectedTime] = useState("09:00");
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ["service-detail", id],
@@ -110,7 +121,12 @@ const ServiceDetail = () => {
       navigate("/auth");
       return;
     }
-    if (!listing) return;
+    if (!listing || !selectedDate) return;
+
+    if (!selectedDate) {
+      toast({ title: "Select a date", description: "Please pick a date for your booking.", variant: "destructive" });
+      return;
+    }
 
     // Prevent booking own service
     if (user.id === listing.cleaner_user_id) {
@@ -120,7 +136,8 @@ const ServiceDetail = () => {
 
     setIsBuying(true);
     try {
-      const scheduledDate = format(addDays(new Date(), 1), "yyyy-MM-dd");
+      const scheduledDate = format(selectedDate, "yyyy-MM-dd");
+      const scheduledTime = selectedTime;
       const { data, error } = await supabase.from("bookings").insert({
         customer_id: user.id,
         cleaner_id: listing.cleaner_user_id,
@@ -129,7 +146,7 @@ const ServiceDetail = () => {
         service_price: listing.price,
         duration_hours: listing.duration_hours || 2,
         scheduled_date: scheduledDate,
-        scheduled_time: "09:00",
+        scheduled_time: scheduledTime,
         status: "pending",
         special_instructions: `Instant booking for service: ${listing.title}`,
       }).select().single();
@@ -329,6 +346,54 @@ const ServiceDetail = () => {
                   <p className="text-sm text-muted-foreground mt-1">
                     {listing.price_type === "hourly" ? "per hour" : listing.price_type === "starting_at" ? "starting price" : "fixed price"}
                   </p>
+                </div>
+
+                {/* Date & Time Picker */}
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Select Date</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="h-4 w-4 mr-2" />
+                          {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Select Time</label>
+                    <Select value={selectedTime} onValueChange={setSelectedTime}>
+                      <SelectTrigger className="w-full">
+                        <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_SLOTS.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {format(new Date(`2000-01-01T${time}`), "h:mm a")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <Button
