@@ -1,29 +1,38 @@
 import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import ServiceCategories from "@/components/ServiceCategories";
-import CleanerOfTheWeek from "@/components/CleanerOfTheWeek";
-import SponsoredSpotlight from "@/components/SponsoredSpotlight";
-import FeaturedCleaners from "@/components/FeaturedCleaners";
-import HowItWorks from "@/components/HowItWorks";
-import TrustSection from "@/components/TrustSection";
-import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
-import NearbyCleanersMap from "@/components/maps/NearbyCleanersMap";
+import HomepageHero from "@/components/homepage/HomepageHero";
+import SearchFilterBar from "@/components/homepage/SearchFilterBar";
+import CleanerOfTheWeekCard from "@/components/homepage/CleanerOfTheWeekCard";
+import CategoryChipsRow from "@/components/homepage/CategoryChipsRow";
+import SponsoredSpotlightSection from "@/components/homepage/SponsoredSpotlightSection";
+import QuoteRequestSidebar from "@/components/homepage/QuoteRequestSidebar";
+import MapPreviewCard from "@/components/homepage/MapPreviewCard";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <Hero />
-        <ServiceCategories />
-        <NearbyCleanersMap />
-        <CleanerOfTheWeek />
-        <SponsoredSpotlight variant="homepage" limit={8} />
-        <FeaturedCleaners />
-        <HowItWorks />
-        <TrustSection />
-        <CTASection />
+        <HomepageHero />
+        <SearchFilterBar />
+
+        {/* Main 2-Column Layout */}
+        <div className="container mx-auto px-4 py-6">
+          <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+            {/* Left Column */}
+            <div className="space-y-6">
+              <CleanerOfTheWeekCard />
+              <CategoryChipsRow />
+              <SponsoredSpotlightSection />
+            </div>
+
+            {/* Right Sidebar */}
+            <div className="space-y-6">
+              <QuoteRequestSidebar />
+              <MapPreviewCard />
+            </div>
+          </div>
+        </div>
       </main>
       <Footer />
     </div>
