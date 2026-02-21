@@ -37,7 +37,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Briefcase, Eye, Trash2, XCircle, CheckCircle, Users, Clock } from "lucide-react";
+import { Search, Briefcase, Eye, Trash2, XCircle, CheckCircle, Users, Clock, Pencil } from "lucide-react";
+import EditJobDialog from "@/components/EditJobDialog";
 import { format } from "date-fns";
 import logoDefault from "@/assets/logo.jpeg";
 
@@ -80,6 +81,7 @@ const AdminJobs = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteJob, setDeleteJob] = useState<Job | null>(null);
   const [viewJob, setViewJob] = useState<Job | null>(null);
+  const [editJob, setEditJob] = useState<Job | null>(null);
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
 
@@ -341,6 +343,9 @@ const AdminJobs = () => {
                           <Button size="sm" variant="ghost" onClick={() => handleViewJob(job)}>
                             <Eye className="h-4 w-4" />
                           </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditJob(job)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           {job.status === "open" ? (
                             <Button
                               size="sm"
@@ -481,6 +486,12 @@ const AdminJobs = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <EditJobDialog
+        job={editJob}
+        open={!!editJob}
+        onOpenChange={(open) => !open && setEditJob(null)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-jobs"] })}
+      />
     </div>
   );
 };

@@ -14,7 +14,9 @@ import {
   MessageSquare,
   Trash2,
   AlertCircle,
+  Pencil,
 } from "lucide-react";
+import EditJobDialog from "@/components/EditJobDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +50,7 @@ interface Job {
   applications_count: number;
   created_at: string;
   preferred_date: string | null;
+  preferred_time: string | null;
   image_url: string | null;
 }
 
@@ -70,6 +73,7 @@ const MyJobs = () => {
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
   const [applications, setApplications] = useState<Record<string, Application[]>>({});
   const [loadingApps, setLoadingApps] = useState<string | null>(null);
+  const [editJob, setEditJob] = useState<Job | null>(null);
 
   const fetchJobs = async () => {
     if (!user) return;
@@ -375,6 +379,10 @@ const MyJobs = () => {
                           Close Job
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" onClick={() => setEditJob(job)}>
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="sm">
@@ -481,6 +489,12 @@ const MyJobs = () => {
           ))}
         </div>
       )}
+      <EditJobDialog
+        job={editJob}
+        open={!!editJob}
+        onOpenChange={(open) => !open && setEditJob(null)}
+        onSuccess={() => fetchJobs()}
+      />
     </div>
   );
 };

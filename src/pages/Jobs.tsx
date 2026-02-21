@@ -18,8 +18,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   Briefcase, MapPin, Clock, DollarSign, Calendar, Users, Plus,
   Search, Filter, Loader2, Send, ChevronDown, Sparkles, AlertCircle,
-  ImagePlus, X,
+  ImagePlus, X, Pencil,
 } from "lucide-react";
+import EditJobDialog from "@/components/EditJobDialog";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import logoDefault from "@/assets/logo.jpeg";
@@ -64,6 +65,7 @@ const Jobs = () => {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [applyDialogOpen, setApplyDialogOpen] = useState<string | null>(null);
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
+  const [editJob, setEditJob] = useState<Job | null>(null);
 
   // Post job form state
   const [newJob, setNewJob] = useState({
@@ -597,7 +599,12 @@ const Jobs = () => {
                               <a href="/auth">Sign in to Apply</a>
                             </Button>
                           ) : isOwner ? (
-                            <Badge variant="secondary" className="text-xs">Your Job</Badge>
+                            <>
+                              <Button size="sm" variant="outline" className="gap-1.5" onClick={(e) => { e.stopPropagation(); setEditJob(job); }}>
+                                <Pencil className="h-3.5 w-3.5" /> Edit
+                              </Button>
+                              <Badge variant="secondary" className="text-xs">Your Job</Badge>
+                            </>
                           ) : hasApplied ? (
                             <Badge variant="outline" className="text-xs border-secondary/40 text-secondary">
                               ✓ Applied
@@ -661,6 +668,12 @@ const Jobs = () => {
         )}
       </main>
       <Footer />
+      <EditJobDialog
+        job={editJob}
+        open={!!editJob}
+        onOpenChange={(open) => !open && setEditJob(null)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["jobs"] })}
+      />
     </div>
   );
 };
