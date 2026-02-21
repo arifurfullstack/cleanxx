@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,6 +41,7 @@ const ServiceDetail = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1));
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
 
   // Fetch user addresses
   const { data: addresses = [] } = useQuery({
@@ -170,7 +172,7 @@ const ServiceDetail = () => {
         scheduled_time: scheduledTime,
         address_id: selectedAddressId || null,
         status: "pending",
-        special_instructions: `Instant booking for service: ${listing.title}`,
+        special_instructions: specialInstructions.trim() || null,
       }).select().single();
 
       if (error) throw error;
@@ -425,6 +427,20 @@ const ServiceDetail = () => {
                     )}
                   </div>
                 )}
+
+                {/* Special Instructions */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Special Instructions</label>
+                  <Textarea
+                    placeholder="Any notes for the cleaner (e.g. parking info, access codes, pet details)..."
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    className="resize-none text-sm"
+                    rows={3}
+                    maxLength={500}
+                  />
+                  <p className="text-[11px] text-muted-foreground text-right mt-1">{specialInstructions.length}/500</p>
+                </div>
 
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Select Time</label>
