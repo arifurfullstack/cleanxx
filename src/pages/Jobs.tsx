@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +54,7 @@ const URGENCY_OPTIONS = [
 
 const Jobs = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -439,7 +441,10 @@ const Jobs = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                             <div>
-                              <h3 className="font-semibold text-foreground text-base group-hover:text-primary transition-colors line-clamp-1">
+                              <h3
+                                className="font-semibold text-foreground text-base group-hover:text-primary transition-colors line-clamp-1 cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}`); }}
+                              >
                                 {job.title}
                               </h3>
                               <p className="text-sm text-muted-foreground mt-0.5">
@@ -498,7 +503,10 @@ const Jobs = () => {
                         )}
 
                         {/* Actions */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/jobs/${job.id}`)}>
+                            View Details
+                          </Button>
                           {!user ? (
                             <Button size="sm" asChild>
                               <a href="/auth">Sign in to Apply</a>

@@ -43,6 +43,7 @@ import AdminJobs from "./pages/admin-dashboard/AdminJobs";
 import CleanerSponsorship from "./pages/cleaner-dashboard/CleanerSponsorship";
 import Reviews from "./pages/Reviews";
 import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/for-cleaners" element={<ForCleaners />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
             
             {/* Customer Dashboard Routes */}
             <Route path="/dashboard" element={<DashboardLayout />}>
