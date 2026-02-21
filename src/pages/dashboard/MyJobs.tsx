@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import logoDefault from "@/assets/logo.jpeg";
 import { format } from "date-fns";
 import {
   Briefcase,
@@ -47,6 +48,7 @@ interface Job {
   applications_count: number;
   created_at: string;
   preferred_date: string | null;
+  image_url: string | null;
 }
 
 interface Application {
@@ -312,7 +314,15 @@ const MyJobs = () => {
                 className="flex items-center justify-between p-4 md:p-6 cursor-pointer hover:bg-muted/30 transition-colors"
                 onClick={() => toggleJob(job.id)}
               >
-                <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden ring-2 ring-primary/10">
+                    <img
+                      src={job.image_url || logoDefault}
+                      alt={job.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-semibold text-lg truncate">{job.title}</h3>
                     {getStatusBadge(job.status)}
@@ -341,6 +351,7 @@ const MyJobs = () => {
                       <Clock className="h-3.5 w-3.5" />
                       {format(new Date(job.created_at), "MMM d, yyyy")}
                     </span>
+                  </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
