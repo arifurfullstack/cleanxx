@@ -37,6 +37,7 @@ import AdminSubscriptionPlans from "./pages/admin-dashboard/AdminSubscriptionPla
 import AdminSubscriptionVerification from "./pages/admin-dashboard/AdminSubscriptionVerification";
 import AdminSponsoredListings from "./pages/admin-dashboard/AdminSponsoredListings";
 import AdminCleanerOfTheWeek from "./pages/admin-dashboard/AdminCleanerOfTheWeek";
+import AdminThemeManagement from "./pages/admin-dashboard/AdminThemeManagement";
 import CleanerSponsorship from "./pages/cleaner-dashboard/CleanerSponsorship";
 import NotFound from "./pages/NotFound";
 
@@ -92,6 +93,7 @@ const App = () => (
               <Route path="payment-gateway" element={<AdminPaymentGateway />} />
               <Route path="payment-verification" element={<AdminPaymentVerification />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="theme" element={<AdminThemeManagement />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
