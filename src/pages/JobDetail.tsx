@@ -35,6 +35,8 @@ import {
   CheckCircle,
   Timer,
   User,
+  Share2,
+  Link,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -268,11 +270,23 @@ const JobDetail = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Back button */}
-        <Button variant="ghost" size="sm" className="mb-6 -ml-2 text-muted-foreground" onClick={() => navigate("/jobs")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back to Jobs
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={() => navigate("/jobs")}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Jobs
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              toast({ title: "Link Copied!", description: "Job link has been copied to your clipboard." });
+            }}
+          >
+            <Link className="h-4 w-4 mr-1" />
+            Share
+          </Button>
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
