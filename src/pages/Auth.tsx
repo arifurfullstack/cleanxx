@@ -44,18 +44,20 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
 
-  // Helper to get dashboard path based on user role
-  const getDashboardPath = (userMetadata: Record<string, unknown> | undefined) => {
-    const accountType = userMetadata?.account_type;
-    return accountType === "cleaner" ? "/cleaner/dashboard" : "/dashboard";
-  };
+  const { role, roleLoading } = useAuth();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated based on role
   useEffect(() => {
-    if (user && !authLoading) {
-      navigate(getDashboardPath(user.user_metadata));
+    if (user && !authLoading && !roleLoading) {
+      if (role === "admin") {
+        navigate("/admin/dashboard");
+      } else if (role === "cleaner") {
+        navigate("/cleaner/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, role, roleLoading, navigate]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
