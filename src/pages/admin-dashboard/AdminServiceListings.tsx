@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,12 +22,35 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Search, Trash2, Eye, ShoppingBag, DollarSign, MapPin, Clock, Loader2, Download,
+  Search, Trash2, Eye, ShoppingBag, DollarSign, MapPin, Clock, Loader2, Download, Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import logoDefault from "@/assets/logo.jpeg";
 
 type StatusFilter = "all" | "active" | "inactive";
+
+const SERVICE_CATEGORIES = [
+  "Home Cleaning", "Office Cleaning", "Deep Cleaning", "Move-in/Move-out",
+  "Carpet Cleaning", "Window Cleaning", "Post-Construction", "Eco-Friendly Cleaning", "Other",
+];
+
+const PRICE_TYPES = [
+  { value: "fixed", label: "Fixed Price" },
+  { value: "hourly", label: "Per Hour" },
+  { value: "starting_at", label: "Starting At" },
+];
+
+interface EditForm {
+  title: string;
+  description: string;
+  category: string;
+  price_type: string;
+  price: string;
+  duration_hours: string;
+  location: string;
+  delivery_time: string;
+  features: string;
+}
 
 const AdminServiceListings = () => {
   const { toast } = useToast();
@@ -34,6 +59,9 @@ const AdminServiceListings = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewListing, setViewListing] = useState<any | null>(null);
+  const [editListing, setEditListing] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["admin-service-listings"],
@@ -78,6 +106,55 @@ const AdminServiceListings = () => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const openEdit = (listing: any) => {
+    setEditListing(listing);
+    setEditForm({
+      title: listing.title,
+      description: listing.description,
+      category: listing.category,
+      price_type: listing.price_type,
+      price: listing.price.toString(),
+      duration_hours: (listing.duration_hours || 2).toString(),
+      location: listing.location || "",
+      delivery_time: listing.delivery_time || "Same day",
+      features: (listing.features || []).join("\n"),
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm || !editListing) return;
+    if (!editForm.title.trim() || !editForm.description.trim()) {
+      toast({ title: "Title and description are required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("service_listings")
+        .update({
+          title: editForm.title.trim(),
+          description: editForm.description.trim(),
+          category: editForm.category,
+          price_type: editForm.price_type,
+          price: parseFloat(editForm.price) || 50,
+          duration_hours: parseFloat(editForm.duration_hours) || 2,
+          location: editForm.location.trim() || null,
+          delivery_time: editForm.delivery_time.trim() || "Same day",
+          features: editForm.features.split("\n").map((f) => f.trim()).filter(Boolean),
+        })
+        .eq("id", editListing.id);
+      if (error) throw error;
+      toast({ title: "Service listing updated" });
+      queryClient.invalidateQueries({ queryKey: ["admin-service-listings"] });
+      setEditListing(null);
+      setEditForm(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filtered = listings.filter((l: any) => {
     const matchesSearch =
@@ -279,6 +356,9 @@ const AdminServiceListings = () => {
                           <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setViewListing(listing)}>
                             <Eye className="h-4 w-4" />
                           </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(listing)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteId(listing.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -345,6 +425,76 @@ const AdminServiceListings = () => {
                 <span>Views: {viewListing.views_count}</span>
                 <span>Orders: {viewListing.orders_count}</span>
                 <span>Created: {format(new Date(viewListing.created_at), "MMM d, yyyy")}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editListing} onOpenChange={(open) => { if (!open) { setEditListing(null); setEditForm(null); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Service Listing</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>Title *</Label>
+                <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} maxLength={100} />
+              </div>
+              <div className="space-y-2">
+                <Label>Description *</Label>
+                <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={4} maxLength={2000} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Price Type</Label>
+                  <Select value={editForm.price_type} onValueChange={(v) => setEditForm({ ...editForm, price_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PRICE_TYPES.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>Price ($)</Label>
+                  <Input type="number" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} min="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Duration (hrs)</Label>
+                  <Input type="number" value={editForm.duration_hours} onChange={(e) => setEditForm({ ...editForm, duration_hours: e.target.value })} min="0.5" step="0.5" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Delivery</Label>
+                  <Input value={editForm.delivery_time} onChange={(e) => setEditForm({ ...editForm, delivery_time: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} placeholder="City or area" />
+              </div>
+              <div className="space-y-2">
+                <Label>Features (one per line)</Label>
+                <Textarea value={editForm.features} onChange={(e) => setEditForm({ ...editForm, features: e.target.value })} rows={4} />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => { setEditListing(null); setEditForm(null); }}>Cancel</Button>
+                <Button onClick={handleSaveEdit} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
