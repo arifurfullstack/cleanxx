@@ -1,37 +1,36 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copy all files
-COPY package.json package-lock.json bun.lockb* ./
+# Copy package files
+COPY package.json package-lock.json* bun.lockb* ./
 
-# Install dependencies - use npm first, fall back to bun
-RUN npm ci --prefer-offline --no-audit || (npm install -g bun && bun install --frozen-lockfile)
+# Install dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Build the app
-RUN npm run build || (npm install -g bun && bun run build)
+RUN npm run build
 
-# Production stage
-FROM node:20-alpine
+# Production stage - Use Node directly to serve
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install serve to serve static files
+# Install serve globally
 RUN npm install -g serve
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Expose port 3000
+# Create a simple server script
+RUN echo '#!/bin/sh\nserve -s /app/dist -l 3000' > /app/start.sh && chmod +x /app/start.sh
+
+# Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
-
 # Start the application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["serve", "-s", "/app/dist", "-l", "3000"]
