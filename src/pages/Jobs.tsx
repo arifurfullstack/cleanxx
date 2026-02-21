@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Briefcase, MapPin, Clock, DollarSign, Calendar, Users, Plus,
   Search, Filter, Loader2, Send, ChevronDown, Sparkles, AlertCircle,
+  ImagePlus, X,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -38,6 +39,7 @@ interface Job {
   status: string;
   applications_count: number;
   created_at: string;
+  image_url: string | null;
   poster_name?: string;
 }
 
@@ -72,6 +74,28 @@ const Jobs = () => {
   // Apply form state
   const [applyMessage, setApplyMessage] = useState("");
   const [applyRate, setApplyRate] = useState("");
+
+  // Image upload state
+  const [jobImage, setJobImage] = useState<File | null>(null);
+  const [jobImagePreview, setJobImagePreview] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max image size is 5MB.", variant: "destructive" });
+      return;
+    }
+    setJobImage(file);
+    setJobImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    setJobImage(null);
+    setJobImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
 
   // Fetch jobs
   const { data: jobs = [], isLoading } = useQuery({
@@ -138,6 +162,23 @@ const Jobs = () => {
       if (!newJob.title.trim() || !newJob.description.trim() || !newJob.location.trim()) {
         throw new Error("Please fill in title, description, and location");
       }
+
+      let imageUrl: string | null = null;
+
+      // Upload image if selected
+      if (jobImage) {
+        const fileExt = jobImage.name.split(".").pop();
+        const filePath = `${user!.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("job-images")
+          .upload(filePath, jobImage);
+        if (uploadError) throw new Error("Failed to upload image");
+        const { data: urlData } = supabase.storage
+          .from("job-images")
+          .getPublicUrl(filePath);
+        imageUrl = urlData.publicUrl;
+      }
+
       const { error } = await supabase.from("jobs").insert({
         user_id: user!.id,
         title: newJob.title.trim(),
@@ -150,6 +191,7 @@ const Jobs = () => {
         preferred_date: newJob.preferred_date || null,
         preferred_time: newJob.preferred_time || null,
         urgency: newJob.urgency,
+        image_url: imageUrl,
       });
       if (error) throw error;
     },
@@ -157,6 +199,7 @@ const Jobs = () => {
       toast({ title: "Job Posted!", description: "Your job is now live." });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       setPostDialogOpen(false);
+      clearImage();
       setNewJob({
         title: "", description: "", service_type: "Home Cleaning", location: "",
         budget_min: "", budget_max: "", duration_hours: "2",
@@ -356,6 +399,40 @@ const Jobs = () => {
                           </Select>
                         </div>
                       </div>
+                      {/* Image Upload */}
+                      <div className="space-y-2">
+                        <Label>Photo (optional)</Label>
+                        <input
+                          ref={imageInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
+                        {jobImagePreview ? (
+                          <div className="relative rounded-lg overflow-hidden border border-border">
+                            <img src={jobImagePreview} alt="Preview" className="w-full h-40 object-cover" />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7"
+                              onClick={clearImage}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => imageInputRef.current?.click()}
+                            className="w-full h-28 rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
+                          >
+                            <ImagePlus className="h-6 w-6" />
+                            <span className="text-xs">Click to add a photo</span>
+                          </button>
+                        )}
+                      </div>
                       <Button
                         className="w-full"
                         size="lg"
@@ -490,6 +567,13 @@ const Jobs = () => {
                     {isExpanded && (
                       <div className="px-5 pb-5 pt-0 animate-fade-in">
                         <Separator className="mb-4" />
+                        {job.image_url && (
+                          <img
+                            src={job.image_url}
+                            alt={job.title}
+                            className="w-full h-48 object-cover rounded-lg mb-4"
+                          />
+                        )}
                         <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap mb-4">
                           {job.description}
                         </p>

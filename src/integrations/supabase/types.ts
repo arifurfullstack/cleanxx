@@ -263,6 +263,7 @@ export type Database = {
           description: string
           duration_hours: number | null
           id: string
+          image_url: string | null
           location: string
           preferred_date: string | null
           preferred_time: string | null
@@ -281,6 +282,7 @@ export type Database = {
           description: string
           duration_hours?: number | null
           id?: string
+          image_url?: string | null
           location: string
           preferred_date?: string | null
           preferred_time?: string | null
@@ -299,6 +301,7 @@ export type Database = {
           description?: string
           duration_hours?: number | null
           id?: string
+          image_url?: string | null
           location?: string
           preferred_date?: string | null
           preferred_time?: string | null
