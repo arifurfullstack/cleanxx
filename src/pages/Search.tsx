@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { LayoutGrid, List, Search as SearchIcon } from "lucide-react";
+import { LayoutGrid, List, Search as SearchIcon, Map } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SearchFilters, { FilterState } from "@/components/SearchFilters";
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import SearchResultsMap from "@/components/maps/SearchResultsMap";
 
 // Mock data - will be replaced with API calls
 const mockCleaners: Cleaner[] = [
@@ -151,7 +152,8 @@ const mockCleaners: Cleaner[] = [
 
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
+  const [activeMapCleaner, setActiveMapCleaner] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   
   const initialService = searchParams.get("service");
@@ -285,13 +287,16 @@ const Search = () => {
                 <ToggleGroup
                   type="single"
                   value={viewMode}
-                  onValueChange={(value) => value && setViewMode(value as "grid" | "list")}
+                  onValueChange={(value) => value && setViewMode(value as "grid" | "list" | "map")}
                 >
                   <ToggleGroupItem value="grid" aria-label="Grid view">
                     <LayoutGrid className="h-4 w-4" />
                   </ToggleGroupItem>
                   <ToggleGroupItem value="list" aria-label="List view">
                     <List className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="map" aria-label="Map view">
+                    <Map className="h-4 w-4" />
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
@@ -312,25 +317,48 @@ const Search = () => {
               </Select>
             </div>
 
-            {/* Results Grid/List */}
+            {/* Results Grid/List/Map */}
             {filteredCleaners.length > 0 ? (
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid md:grid-cols-2 xl:grid-cols-3 gap-6"
-                    : "space-y-4"
-                }
-              >
-                {filteredCleaners.map((cleaner, index) => (
-                  <div
-                    key={cleaner.id}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
-                    <CleanerCard cleaner={cleaner} variant={viewMode} />
+              viewMode === "map" ? (
+                <div className="space-y-4">
+                  <SearchResultsMap
+                    cleaners={filteredCleaners}
+                    activeCleanerId={activeMapCleaner}
+                    onCleanerSelect={setActiveMapCleaner}
+                    className="h-[500px] rounded-xl overflow-hidden border border-border"
+                  />
+                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredCleaners.map((cleaner) => (
+                      <div
+                        key={cleaner.id}
+                        className={`cursor-pointer transition-all ${activeMapCleaner === cleaner.id ? "ring-2 ring-primary rounded-xl" : ""}`}
+                        onMouseEnter={() => setActiveMapCleaner(cleaner.id)}
+                        onMouseLeave={() => setActiveMapCleaner(null)}
+                      >
+                        <CleanerCard cleaner={cleaner} variant="grid" />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "grid md:grid-cols-2 xl:grid-cols-3 gap-6"
+                      : "space-y-4"
+                  }
+                >
+                  {filteredCleaners.map((cleaner, index) => (
+                    <div
+                      key={cleaner.id}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <CleanerCard cleaner={cleaner} variant={viewMode} />
+                    </div>
+                  ))}
+                </div>
+              )
             ) : (
               <div className="text-center py-16">
                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">

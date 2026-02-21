@@ -8,6 +8,7 @@ import HowItWorks from "@/components/HowItWorks";
 import TrustSection from "@/components/TrustSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import NearbyCleanersMap from "@/components/maps/NearbyCleanersMap";
 
 const Index = () => {
   return (
@@ -16,6 +17,7 @@ const Index = () => {
       <main>
         <Hero />
         <ServiceCategories />
+        <NearbyCleanersMap />
         <CleanerOfTheWeek />
         <SponsoredSpotlight variant="homepage" limit={8} />
         <FeaturedCleaners />

@@ -55,6 +55,7 @@ import { cn } from "@/lib/utils";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { PaymentMethod } from "@/hooks/usePaymentSettings";
 import PaymentMethodSelector from "@/components/booking/PaymentMethodSelector";
+import ServiceAreaMap from "@/components/maps/ServiceAreaMap";
 
 // Subscription tier display config for CleanerProfile
 const PROFILE_TIER_CONFIG = {
@@ -417,7 +418,7 @@ const CleanerProfile = () => {
               </TabsList>
 
               {/* About Tab */}
-              <TabsContent value="about" className="mt-6">
+              <TabsContent value="about" className="mt-6 space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>About {cleaner.name}</CardTitle>
@@ -426,6 +427,27 @@ const CleanerProfile = () => {
                     <p className="text-muted-foreground whitespace-pre-line">
                       {cleaner.description}
                     </p>
+                  </CardContent>
+                </Card>
+
+                {/* Service Area Map */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      Service Area
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {cleaner.name} serves {cleaner.location} and surrounding areas
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <ServiceAreaMap
+                      location={cleaner.location}
+                      serviceAreas={["Mississauga, ON", "Brampton, ON", "Markham, ON"]}
+                      cleanerName={cleaner.name}
+                      className="h-[350px] rounded-xl overflow-hidden border border-border"
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
