@@ -39,6 +39,27 @@ const ServiceDetail = () => {
   const [isBuying, setIsBuying] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(addDays(new Date(), 1));
   const [selectedTime, setSelectedTime] = useState("09:00");
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+
+  // Fetch user addresses
+  const { data: addresses = [] } = useQuery({
+    queryKey: ["user-addresses", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("addresses")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("is_default", { ascending: false });
+      if (error) throw error;
+      // Auto-select default address
+      const defaultAddr = data?.find((a) => a.is_default) || data?.[0];
+      if (defaultAddr && !selectedAddressId) {
+        setSelectedAddressId(defaultAddr.id);
+      }
+      return data || [];
+    },
+  });
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ["service-detail", id],
@@ -147,6 +168,7 @@ const ServiceDetail = () => {
         duration_hours: listing.duration_hours || 2,
         scheduled_date: scheduledDate,
         scheduled_time: scheduledTime,
+        address_id: selectedAddressId || null,
         status: "pending",
         special_instructions: `Instant booking for service: ${listing.title}`,
       }).select().single();
@@ -376,7 +398,33 @@ const ServiceDetail = () => {
                         />
                       </PopoverContent>
                     </Popover>
+                </div>
+
+                {/* Address Selector */}
+                {user && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Select Address</label>
+                    {addresses.length > 0 ? (
+                      <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
+                        <SelectTrigger className="w-full">
+                          <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <SelectValue placeholder="Choose address" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {addresses.map((addr) => (
+                            <SelectItem key={addr.id} value={addr.id}>
+                              {addr.label} – {addr.street_address}, {addr.city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/dashboard/addresses")}>
+                        <MapPin className="h-4 w-4 mr-2" /> Add an Address
+                      </Button>
+                    )}
                   </div>
+                )}
 
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Select Time</label>
