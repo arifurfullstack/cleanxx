@@ -20,8 +20,8 @@ const Header = () => {
   const navLinks = [
     { label: "Find Cleaners", href: "/search", icon: Search },
     { label: "Post a Job", href: "/for-cleaners", icon: Briefcase },
-    { label: "My Bookings", href: "/dashboard/upcoming-bookings", icon: CalendarDays },
-    { label: "Reviews", href: "/#how-it-works", icon: Star },
+    { label: "My Bookings", href: "/dashboard/upcoming", icon: CalendarDays },
+    { label: "Reviews", href: "/reviews", icon: Star },
   ];
 
   const getInitials = (email: string) => email.charAt(0).toUpperCase();
