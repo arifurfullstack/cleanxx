@@ -54,7 +54,7 @@ const Header = () => {
                 to={link.href}
                 className="group inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-primary hover:text-primary-dark transition-colors"
               >
-                <link.icon className="h-3.5 w-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                <link.icon className="h-3.5 w-3.5 text-secondary group-hover:text-secondary-dark transition-colors" />
                 {link.label}
               </Link>
             ))}
@@ -155,7 +155,7 @@ const Header = () => {
                   className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <link.icon className="h-4 w-4 text-primary/70" />
+                  <link.icon className="h-4 w-4 text-secondary" />
                   {link.label}
                 </Link>
               ))}
