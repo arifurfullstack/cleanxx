@@ -39,6 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Search, Briefcase, Eye, Trash2, XCircle, CheckCircle, Users, Clock } from "lucide-react";
 import { format } from "date-fns";
+import logoDefault from "@/assets/logo.jpeg";
 
 interface Job {
   id: string;
@@ -55,6 +56,7 @@ interface Job {
   preferred_time: string | null;
   applications_count: number;
   user_id: string;
+  image_url: string | null;
   created_at: string;
   poster_name?: string;
   poster_email?: string;
@@ -316,7 +318,12 @@ const AdminJobs = () => {
                 <TableBody>
                   {filteredJobs.map((job) => (
                     <TableRow key={job.id}>
-                      <TableCell className="font-medium max-w-[200px] truncate">{job.title}</TableCell>
+                      <TableCell className="font-medium max-w-[200px]">
+                        <div className="flex items-center gap-2">
+                          <img src={job.image_url || logoDefault} alt={job.title} className="h-8 w-8 rounded object-cover shrink-0" />
+                          <span className="truncate">{job.title}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="text-sm">{job.poster_name}</p>
